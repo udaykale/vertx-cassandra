@@ -11,16 +11,19 @@ import io.vertx.ext.sql.SQLRowStream;
 import java.util.List;
 import java.util.function.Function;
 
+/**
+ * @author uday
+ */
 public interface CassandraConnection extends SQLConnection, Comparable<CassandraConnection> {
 
-    SQLConnection queryStreamWithParams(String query, JsonArray params, Function<Row, JsonArray> rowMapper,
-                                        Handler<AsyncResult<SQLRowStream>> handler);
+    CassandraConnection queryStreamWithParams(String query, JsonArray params, Function<Row, JsonArray> rowMapper,
+                                              Handler<AsyncResult<SQLRowStream>> handler);
 
-    SQLConnection queryWithParams(String query, JsonArray params, Function<Row, JsonArray> rowMapper,
-                                  Handler<AsyncResult<ResultSet>> resultHandler);
+    CassandraConnection queryWithParams(String query, JsonArray params, Function<Row, JsonArray> rowMapper,
+                                        Handler<AsyncResult<ResultSet>> resultHandler);
 
-    SQLConnection batchWithParams(List<String> sqlStatements, List<JsonArray> args,
-                                  Handler<AsyncResult<List<Integer>>> handler);
+    CassandraConnection batchWithParams(List<String> sqlStatements, List<JsonArray> args,
+                                        Handler<AsyncResult<List<Integer>>> handler);
 
     int connectionId();
 

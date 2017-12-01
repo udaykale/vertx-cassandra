@@ -1,11 +1,7 @@
 package com.udaykale.vertx.ext.asyncsql.cassandra.impl;
 
 import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.HostDistance;
-import com.datastax.driver.core.PoolingOptions;
 import com.datastax.driver.core.Session;
-import com.datastax.driver.core.policies.LoadBalancingPolicy;
-import com.datastax.driver.core.policies.RoundRobinPolicy;
 import com.udaykale.vertx.ext.asyncsql.cassandra.CassandraClient;
 import io.vertx.core.Context;
 import io.vertx.core.Vertx;
@@ -14,6 +10,9 @@ import io.vertx.core.shareddata.SharedData;
 
 import java.util.Map;
 
+/**
+ * @author uday
+ */
 public final class CassandraClientHelper {
 
     public static CassandraClient getOrCreateCassandraClient(Vertx vertx, Cluster cluster,

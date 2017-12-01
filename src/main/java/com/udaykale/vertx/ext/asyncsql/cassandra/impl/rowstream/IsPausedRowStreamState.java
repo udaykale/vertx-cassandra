@@ -27,8 +27,8 @@ final class IsPausedRowStreamState implements State<RowStreamStateWrapper> {
 
     @Override
     public void close(RowStreamStateWrapper stateWrapper) {
-        RowStreamStateHelper rowStreamStateHelper = new RowStreamStateHelper(sqlRowStream);
-        rowStreamStateHelper.close(stateWrapper);
+        RowStreamCloseHelper rowStreamCloseHelper = new RowStreamCloseHelper(sqlRowStream);
+        rowStreamCloseHelper.close(stateWrapper);
     }
 
     @Override

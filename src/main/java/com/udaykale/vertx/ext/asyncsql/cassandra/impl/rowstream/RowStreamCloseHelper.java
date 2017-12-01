@@ -9,11 +9,11 @@ import java.util.Objects;
 /**
  * @author uday
  */
-final class RowStreamStateHelper {
+final class RowStreamCloseHelper {
 
     private final SQLRowStream sqlRowStream;
 
-    RowStreamStateHelper(SQLRowStream sqlRowStream) {
+    RowStreamCloseHelper(SQLRowStream sqlRowStream) {
         this.sqlRowStream = Objects.requireNonNull(sqlRowStream);
     }
 

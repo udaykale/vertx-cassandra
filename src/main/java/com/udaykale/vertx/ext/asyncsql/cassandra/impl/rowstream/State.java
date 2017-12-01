@@ -3,7 +3,7 @@ package com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream;
 /**
  * @author uday
  */
-public interface State<T extends StateWrapper> {
+interface State<T extends StateWrapper> {
 
     void close(T stateWrapper);
 

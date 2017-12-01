@@ -8,22 +8,14 @@ import io.vertx.ext.sql.SQLClient;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 @RunWith(VertxUnitRunner.class)
 public class CassandraConnectionTest {
 
-    private SQLClient sqlClient;
-
-    @Before
-    public void before() {
-        Cluster cluster = Cluster.builder()
-                .addContactPoint("localhost")
-                .build();
-        sqlClient = CassandraClient.createShared(Vertx.vertx(), "client1", cluster);
-    }
+    private final Cluster cluster = Cluster.builder().addContactPoint("localhost").build();
+    private final SQLClient sqlClient = CassandraClient.createShared(Vertx.vertx(), "client1", cluster, "test");
 
     @Test
     public void query10000Elements(TestContext context) {

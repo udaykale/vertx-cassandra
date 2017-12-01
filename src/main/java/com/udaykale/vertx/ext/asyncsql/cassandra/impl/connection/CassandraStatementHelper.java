@@ -1,4 +1,4 @@
-package com.udaykale.vertx.ext.asyncsql.cassandra.impl;
+package com.udaykale.vertx.ext.asyncsql.cassandra.impl.connection;
 
 import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.BoundStatement;
@@ -6,29 +6,16 @@ import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.SimpleStatement;
 import com.datastax.driver.core.Statement;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.json.JsonArray;
-import io.vertx.ext.sql.ResultSet;
 import io.vertx.ext.sql.SQLOptions;
-import io.vertx.ext.sql.SQLRowStream;
-import io.vertx.ext.sql.UpdateResult;
 
 import java.util.List;
 import java.util.Map;
 
-import static java.util.Collections.nCopies;
-
-final class CassandraConnectionHelper {
-
-    static ResultSet resultSetOf(List<JsonArray> jsonArrays, SQLRowStream sqlRowStream) {
-        ResultSet resultSet = new ResultSet();
-        resultSet.setColumnNames(sqlRowStream.columns());
-        resultSet.setResults(jsonArrays);
-        return resultSet;
-    }
+/**
+ * @author uday
+ */
+final class CassandraStatementHelper {
 
     static Statement generateStatement(List<String> queries, List<JsonArray> params,
                                        Session session, SQLOptions sqlOptions,
@@ -108,46 +95,5 @@ final class CassandraConnectionHelper {
         }
 
         return batchStatement;
-    }
-
-    static void handleUpdate(Handler<AsyncResult<UpdateResult>> resultHandler,
-                             Context context, AsyncResult<ResultSet> future) {
-        Future<UpdateResult> result;
-
-        if (future.succeeded()) {
-            UpdateResult updateResult = new UpdateResult();
-            updateResult.setUpdated(-1);
-            result = Future.succeededFuture(updateResult);
-        } else {
-            result = Future.failedFuture(future.cause());
-        }
-
-        context.runOnContext(v -> result.setHandler(resultHandler));
-    }
-
-    static void handleBatch(int resultSize, Handler<AsyncResult<List<Integer>>> handler,
-                            Context context, AsyncResult<SQLRowStream> future) {
-        Future<List<Integer>> result;
-
-        if (future.succeeded()) {
-            result = Future.succeededFuture(nCopies(resultSize, -1));
-        } else {
-            result = Future.failedFuture(future.cause());
-        }
-
-        context.runOnContext(v -> result.setHandler(handler));
-    }
-
-    static void handleQuery(Handler<AsyncResult<Void>> resultHandler,
-                            AsyncResult<ResultSet> future, Context context) {
-        Future<Void> result = Future.future();
-
-        if (future.succeeded()) {
-            result.complete();
-        } else {
-            result.fail(future.cause());
-        }
-
-        context.runOnContext(v -> result.setHandler(resultHandler));
     }
 }

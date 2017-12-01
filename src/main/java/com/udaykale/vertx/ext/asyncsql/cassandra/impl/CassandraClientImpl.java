@@ -3,6 +3,7 @@ package com.udaykale.vertx.ext.asyncsql.cassandra.impl;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
 import com.udaykale.vertx.ext.asyncsql.cassandra.CassandraClient;
+import com.udaykale.vertx.ext.asyncsql.cassandra.impl.connection.CassandraConnectionImpl;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -17,7 +18,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * @author uday
+ */
 final class CassandraClientImpl implements CassandraClient {
+
     private final Session session;
     private final Context context;
     private final AtomicBoolean isClosed;
@@ -49,7 +54,7 @@ final class CassandraClientImpl implements CassandraClient {
             // if connection is not setClosing
             if (!isClosing.get()) {
                 // create a new connection
-                int connectionId = atomicInteger.getAndAdd(1);
+                int connectionId = atomicInteger.getAndIncrement();
                 SQLConnection connection = new CassandraConnectionImpl(connectionId,
                         context, session, workerExecutor, preparedStatementCache);
                 // add it to list instance ongoing connections

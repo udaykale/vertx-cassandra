@@ -12,7 +12,7 @@ repositories {
 
 dependencies {
 
-    compile group: 'com.datastax.cassandra', name: 'cassandra-driver-core', version: '3.3.0'
+    compile group: 'com.datastax.cassandra', name: 'cassandra-driver-core', version: '3.3.2'
     compile group: 'io.vertx', name: 'vertx-core', version: '3.5.0'
     compile group: 'io.vertx', name: 'vertx-sql-common', version: '3.5.0'
     compile group: 'io.vertx', name: 'vertx-unit', version: '3.5.0'
