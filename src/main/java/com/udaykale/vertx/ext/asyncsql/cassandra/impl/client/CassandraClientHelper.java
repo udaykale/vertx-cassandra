@@ -1,4 +1,4 @@
-package com.udaykale.vertx.ext.asyncsql.cassandra.impl;
+package com.udaykale.vertx.ext.asyncsql.cassandra.impl.client;
 
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Session;
@@ -13,15 +13,20 @@ import java.util.Map;
 /**
  * @author uday
  */
-public final class CassandraClientHelper {
+final class CassandraClientHelper {
 
-    public static CassandraClient getOrCreateCassandraClient(Vertx vertx, Cluster cluster,
-                                                             String keySpace, String clientName) {
+    private final Vertx vertx;
+
+    CassandraClientHelper(Vertx vertx) {
+        this.vertx = vertx;
+    }
+
+    CassandraClient getOrCreateCassandraClient(Cluster cluster, String keySpace, String clientName) {
         CassandraClient cassandraClient;
 
         synchronized (vertx) {
             SharedData sharedData = vertx.sharedData();
-            String baseName = clientName + CassandraClientHelper.class + CassandraClient.class;
+            String baseName = clientName + CassandraClient.class;
             Map<String, CassandraClient> sharedDataMap = sharedData.getLocalMap(baseName);
             cassandraClient = sharedDataMap.get(baseName);
 

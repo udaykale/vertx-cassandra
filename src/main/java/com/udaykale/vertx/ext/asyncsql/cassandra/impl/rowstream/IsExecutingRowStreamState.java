@@ -7,7 +7,7 @@ import java.util.Objects;
 /**
  * @author uday
  */
-final class IsExecutingRowStreamState implements State<RowStreamStateWrapper> {
+final class IsExecutingRowStreamState implements RowStreamState {
 
     private final SQLRowStream sqlRowStream;
 
@@ -36,6 +36,6 @@ final class IsExecutingRowStreamState implements State<RowStreamStateWrapper> {
 
     @Override
     public StateType type() {
-        return StateType.IS_EXECUTING;
+        return StateType.EXECUTING;
     }
 }

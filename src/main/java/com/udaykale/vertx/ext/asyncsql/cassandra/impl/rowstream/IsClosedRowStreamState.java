@@ -3,7 +3,7 @@ package com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream;
 /**
  * @author uday
  */
-final class IsClosedRowStreamState implements State<RowStreamStateWrapper> {
+final class IsClosedRowStreamState implements RowStreamState {
 
     private IsClosedRowStreamState() {
     }
@@ -29,6 +29,6 @@ final class IsClosedRowStreamState implements State<RowStreamStateWrapper> {
 
     @Override
     public StateType type() {
-        return StateType.IS_CLOSED;
+        return StateType.CLOSED;
     }
 }

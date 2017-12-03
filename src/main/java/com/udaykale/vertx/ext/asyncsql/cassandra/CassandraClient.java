@@ -1,7 +1,7 @@
 package com.udaykale.vertx.ext.asyncsql.cassandra;
 
 import com.datastax.driver.core.Cluster;
-import com.udaykale.vertx.ext.asyncsql.cassandra.impl.CassandraClientHelper;
+import com.udaykale.vertx.ext.asyncsql.cassandra.impl.client.CassandraClientImpl;
 import io.vertx.core.Vertx;
 import io.vertx.core.shareddata.Shareable;
 import io.vertx.ext.sql.SQLClient;
@@ -23,7 +23,7 @@ public interface CassandraClient extends SQLClient, Shareable {
      * @return the client
      */
     static CassandraClient createNonShared(Vertx vertx, Cluster cluster) {
-        return CassandraClientHelper.getOrCreateCassandraClient(vertx, cluster, "", UUID.randomUUID().toString());
+        return CassandraClientImpl.getOrCreateCassandraClient(vertx, cluster, "", UUID.randomUUID().toString());
     }
 
     /**
@@ -35,7 +35,7 @@ public interface CassandraClient extends SQLClient, Shareable {
      * @return the client
      */
     static CassandraClient createNonShared(Vertx vertx, Cluster cluster, String keySpace) {
-        return CassandraClientHelper.getOrCreateCassandraClient(vertx, cluster, keySpace, UUID.randomUUID().toString());
+        return CassandraClientImpl.getOrCreateCassandraClient(vertx, cluster, keySpace, UUID.randomUUID().toString());
     }
 
     /**
@@ -48,7 +48,7 @@ public interface CassandraClient extends SQLClient, Shareable {
      * @return the client
      */
     static CassandraClient createShared(Vertx vertx, String clientName, Cluster cluster) {
-        return CassandraClientHelper.getOrCreateCassandraClient(vertx, cluster, "", clientName);
+        return CassandraClientImpl.getOrCreateCassandraClient(vertx, cluster, "", clientName);
     }
 
     /**
@@ -62,7 +62,7 @@ public interface CassandraClient extends SQLClient, Shareable {
      * @return the client
      */
     static CassandraClient createShared(Vertx vertx, String clientName, Cluster cluster, String keySpace) {
-        return CassandraClientHelper.getOrCreateCassandraClient(vertx, cluster, keySpace, clientName);
+        return CassandraClientImpl.getOrCreateCassandraClient(vertx, cluster, keySpace, clientName);
     }
 
     /**
@@ -74,7 +74,7 @@ public interface CassandraClient extends SQLClient, Shareable {
      * @return the client
      */
     static CassandraClient createShared(Vertx vertx, Cluster cluster) {
-        return CassandraClientHelper.getOrCreateCassandraClient(vertx, cluster, "", DEFAULT_CLIENT_NAME);
+        return CassandraClientImpl.getOrCreateCassandraClient(vertx, cluster, "", DEFAULT_CLIENT_NAME);
     }
 
     /**
@@ -87,6 +87,6 @@ public interface CassandraClient extends SQLClient, Shareable {
      * @return the client
      */
     static CassandraClient createShared(Vertx vertx, Cluster cluster, String keySpace) {
-        return CassandraClientHelper.getOrCreateCassandraClient(vertx, cluster, keySpace, DEFAULT_CLIENT_NAME);
+        return CassandraClientImpl.getOrCreateCassandraClient(vertx, cluster, keySpace, DEFAULT_CLIENT_NAME);
     }
 }

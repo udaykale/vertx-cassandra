@@ -5,6 +5,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.sql.ResultSet;
 import io.vertx.ext.sql.SQLClient;
+import io.vertx.ext.sql.SQLConnection;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -26,7 +27,8 @@ public class CassandraConnectionTest {
             if (connectionFuture.failed()) {
                 async.complete();
             } else {
-                connectionFuture.result().query(query, ha -> {
+                SQLConnection sqlConnection = connectionFuture.result();
+                sqlConnection.query(query, ha -> {
                     if (ha.failed()) {
                         async.complete();
                     } else {
@@ -34,7 +36,7 @@ public class CassandraConnectionTest {
                         for (JsonObject jsonObject : resultSet.getRows()) {
                             System.out.println(jsonObject);
                         }
-                        connectionFuture.result().close();
+                        sqlConnection.close();
                         async.complete();
                     }
                 });

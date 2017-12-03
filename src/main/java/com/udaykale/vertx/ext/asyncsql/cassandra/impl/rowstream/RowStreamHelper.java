@@ -31,9 +31,9 @@ final class RowStreamHelper {
     static RowStreamStateWrapper stateWrapper(WorkerExecutor workerExecutor,
                                               Set<SQLRowStream> allRowStreams,
                                               Function<Row, JsonArray> rowMapper,
-                                              CassandraRowStream cassandraRowStream,
+                                              CassandraRowStreamImpl cassandraRowStream,
                                               List<String> columns, ResultSet resultSet) {
-        State<RowStreamStateWrapper> currentState = IsPausedRowStreamState.instance(cassandraRowStream);
+        RowStreamState currentState = IsPausedRowStreamState.instance(cassandraRowStream);
         RowStreamStateWrapper stateWrapper = new RowStreamStateWrapper(currentState);
 
         Function<Row, JsonArray> defaultRowMapper = defaultRowMapper(columns);

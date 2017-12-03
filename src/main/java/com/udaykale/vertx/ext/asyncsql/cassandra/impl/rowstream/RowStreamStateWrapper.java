@@ -15,9 +15,9 @@ import java.util.function.Function;
 /**
  * @author uday
  */
-final class RowStreamStateWrapper implements StateWrapper<RowStreamStateWrapper> {
+final class RowStreamStateWrapper {
 
-    private State<RowStreamStateWrapper> state;
+    private RowStreamState state;
     private ResultSet resultSet;
     private WorkerExecutor workerExecutor;
     private Function<Row, JsonArray> rowMapper;
@@ -28,17 +28,15 @@ final class RowStreamStateWrapper implements StateWrapper<RowStreamStateWrapper>
     private Handler<AsyncResult<Void>> closeHandler;
     private Set<SQLRowStream> allRowStreams;
 
-    RowStreamStateWrapper(State<RowStreamStateWrapper> state) {
+    RowStreamStateWrapper(RowStreamState state) {
         this.state = Objects.requireNonNull(state);
     }
 
-    @Override
-    public State<RowStreamStateWrapper> getState() {
+    public RowStreamState getState() {
         return state;
     }
 
-    @Override
-    public void setState(State<RowStreamStateWrapper> state) {
+    public void setState(RowStreamState state) {
         this.state = Objects.requireNonNull(state);
     }
 

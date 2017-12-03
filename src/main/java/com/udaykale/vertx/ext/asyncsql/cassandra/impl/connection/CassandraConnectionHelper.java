@@ -4,7 +4,8 @@ import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.Statement;
-import com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream.CassandraRowStream;
+import com.udaykale.vertx.ext.asyncsql.cassandra.CassandraConnection;
+import com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream.CassandraRowStreamImpl;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -114,52 +115,12 @@ final class CassandraConnectionHelper {
                                       List<String> queries, List<JsonArray> params,
                                       Function<Row, JsonArray> rowMapper,
                                       Handler<AsyncResult<SQLRowStream>> handler) {
-        WorkerExecutor workerExecutor = connectionInfo.getWorkerExecutor();
-        Context context = connectionInfo.getContext();
 
-        workerExecutor.executeBlocking((Handler<Future<SQLRowStream>>) future ->
-                        executeQueryAndStream(connectionInfo, queries, params, rowMapper, future),
-                future -> executeQueryAndStreamHandler(handler, future, context));
-    }
+        CassandraConnection cassandraConnection = connectionInfo.getConnection();
+        CassandraConnectionStreamHelper cassandraConnectionStreamHelper =
+                new CassandraConnectionStreamHelper(cassandraConnection);
 
-    private static void executeQueryAndStream(ConnectionInfo connectionInfo, List<String> queries,
-                                              List<JsonArray> params, Function<Row, JsonArray> rowMapper,
-                                              Future<SQLRowStream> future) {
-        try {
-            Session session = connectionInfo.getSession();
-            SQLOptions sqlOptions = connectionInfo.getSqlOptions();
-            AtomicInteger rowStreamId = connectionInfo.getRowStreamId();
-            WorkerExecutor workerExecutor = connectionInfo.getWorkerExecutor();
-            Set<SQLRowStream> allRowStreams = connectionInfo.getAllRowStreams();
-            Map<String, PreparedStatement> preparedStatementCache = connectionInfo.getPreparedStatementCache();
-
-            // generate cassandra CQL statement from given params
-            Statement statement = generateStatement(queries, params, session, sqlOptions, preparedStatementCache);
-            //execute statement
-            com.datastax.driver.core.ResultSet resultSet = session.execute(statement);
-            // create a row stream from the result set
-            CassandraRowStream cassandraRowStream = new CassandraRowStream(rowStreamId.getAndIncrement(),
-                    resultSet, workerExecutor, allRowStreams, rowMapper);
-            // add this new stream to list of already created streams
-            allRowStreams.add(cassandraRowStream);
-            future.complete(cassandraRowStream);
-        } catch (Exception e) {
-            future.fail(e);
-        }
-    }
-
-    private static void executeQueryAndStreamHandler(Handler<AsyncResult<SQLRowStream>> handler,
-                                                     AsyncResult<SQLRowStream> blockingCallResult,
-                                                     Context context) {
-        Future<SQLRowStream> result = Future.future();
-
-        if (blockingCallResult.succeeded()) {
-            result.complete(blockingCallResult.result());
-        } else {
-            result.fail(blockingCallResult.cause());
-        }
-
-        context.runOnContext(v -> result.setHandler(handler));
+        cassandraConnectionStreamHelper.queryStreamWithParams(connectionInfo, queries, params, rowMapper, handler);
     }
 
     private static void streamEndHandler(List<JsonArray> jsonArrays, Future<ResultSet> result,

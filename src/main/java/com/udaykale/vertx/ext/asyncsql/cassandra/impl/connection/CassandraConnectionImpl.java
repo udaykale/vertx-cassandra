@@ -6,6 +6,7 @@ import com.datastax.driver.core.Session;
 import com.udaykale.vertx.ext.asyncsql.cassandra.CassandraConnection;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.WorkerExecutor;
 import io.vertx.core.json.JsonArray;
@@ -19,7 +20,9 @@ import io.vertx.ext.sql.UpdateResult;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
@@ -31,6 +34,7 @@ import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.connection.Cassandr
 import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.connection.CassandraConnectionValidationUtils.validateQuery;
 import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.connection.CassandraConnectionValidationUtils.validateQueryParams;
 import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.connection.CassandraConnectionValidationUtils.validateQueryParamsRowMapper;
+import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.connection.ConnectionInfo.DEFAULT_QUERY_TIME_OUT;
 import static java.util.Collections.singletonList;
 
 /**
@@ -38,13 +42,11 @@ import static java.util.Collections.singletonList;
  */
 public final class CassandraConnectionImpl implements CassandraConnection {
 
-    private static final int DEFAULT_QUERY_TIME_OUT = 10000;
-
     private final Context context;
     private final int connectionId;
     private final ConnectionInfo connectionInfo;
 
-    public CassandraConnectionImpl(int connectionId, Context context,
+    public CassandraConnectionImpl(int connectionId, Context context, Set<CassandraConnection> allOpenConnections,
                                    Session session, WorkerExecutor workerExecutor,
                                    Map<String, PreparedStatement> preparedStatementCache) {
         this.connectionId = connectionId;
@@ -53,10 +55,9 @@ public final class CassandraConnectionImpl implements CassandraConnection {
                 .withContext(context)
                 .withSession(session)
                 .withWorkerExecutor(workerExecutor)
+                .withAllOpenConnections(allOpenConnections)
                 .withPreparedStatementCache(preparedStatementCache)
-                .withAllRowStreams(new ConcurrentSkipListSet<>())
-                .withSqlOptions(new SQLOptions().setQueryTimeout(DEFAULT_QUERY_TIME_OUT))
-                .withRowStreamId(new AtomicInteger(1))
+                .withCassandraConnection(this)
                 .build();
     }
 
@@ -64,9 +65,7 @@ public final class CassandraConnectionImpl implements CassandraConnection {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-
         CassandraConnectionImpl that = (CassandraConnectionImpl) o;
-
         return this.connectionId == that.connectionId;
     }
 
@@ -154,10 +153,8 @@ public final class CassandraConnectionImpl implements CassandraConnection {
     @Override
     public SQLConnection batch(List<String> sqlStatements, Handler<AsyncResult<List<Integer>>> handler) {
         validateBatch(sqlStatements, handler);
-
         CassandraConnectionHelper.queryWithParams(connectionInfo, sqlStatements, null, null,
                 future -> handleBatch(sqlStatements.size(), handler, context, future));
-
         return this;
     }
 
@@ -211,7 +208,25 @@ public final class CassandraConnectionImpl implements CassandraConnection {
 
     @Override
     public void close() {
-        // TODO
+        // TODO make this async
+        if (connectionInfo.isConnected()) {
+            connectionInfo.closeConnection();
+            connectionInfo.getAllOpenConnections().remove(this);
+            Handler<AsyncResult<Void>> closeHandler = connectionInfo.getCloseHandler();
+            Set<SQLRowStream> allRowStreams = connectionInfo.getAllRowStreams();
+
+            for (SQLRowStream sqlRowStream : allRowStreams) {
+                sqlRowStream.close();
+            }
+
+            if (closeHandler != null) {
+                context.runOnContext(v -> closeHandler.handle(Future.succeededFuture()));
+            } else {
+                // do nothing
+            }
+        } else {
+            throw new IllegalStateException("Cannot re-close connection when it is already closed");
+        }
     }
 
     @Override

@@ -9,10 +9,12 @@ import io.vertx.ext.sql.SQLRowStream;
 
 import java.util.Objects;
 
+import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream.RowStreamState.StateType.*;
+
 /**
  * @author uday
  */
-final class IsPausedRowStreamState implements State<RowStreamStateWrapper> {
+final class IsPausedRowStreamState implements RowStreamState {
 
     private final SQLRowStream sqlRowStream;
 
@@ -48,7 +50,7 @@ final class IsPausedRowStreamState implements State<RowStreamStateWrapper> {
             int limit = wasLastPage(resultSet) ? 0 : 100;
 
             // read page only when we are in executing state and data is remaining in the page
-            while (wrapper.getState().type() == StateType.IS_EXECUTING && remainingInPage-- > limit) {
+            while (wrapper.getState().type() == EXECUTING && remainingInPage-- > limit) {
                 Row row = resultSet.one();
                 JsonArray jsonArray = wrapper.getRowMapper().apply(row);
                 wrapper.getHandler().handle(jsonArray);
@@ -74,7 +76,7 @@ final class IsPausedRowStreamState implements State<RowStreamStateWrapper> {
                     } else {
                         synchronized (sqlRowStream) {
                             // pause the stream since we still have data and may continue executing
-                            if (stateWrapper.getState().type() == StateType.IS_EXECUTING) {
+                            if (stateWrapper.getState().type() == EXECUTING) {
                                 stateWrapper.setState(IsPausedRowStreamState.instance(sqlRowStream));
                                 sqlRowStream.notify(); // leave the lock on wrapper
                                 // call result set closed handler when a page is read
@@ -110,6 +112,6 @@ final class IsPausedRowStreamState implements State<RowStreamStateWrapper> {
 
     @Override
     public StateType type() {
-        return StateType.IS_PAUSED;
+        return PAUSED;
     }
 }

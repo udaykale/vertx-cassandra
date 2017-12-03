@@ -2,6 +2,7 @@ package com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream;
 
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
+import com.udaykale.vertx.ext.asyncsql.cassandra.CassandraRowStream;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.WorkerExecutor;
@@ -12,10 +13,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 
+import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream.RowStreamHelper.stateWrapper;
+
 /**
  * @author uday
  */
-public final class CassandraRowStream implements SQLRowStream, Comparable<CassandraRowStream> {
+public final class CassandraRowStreamImpl implements CassandraRowStream {
 
     private final ResultSet resultSet;
     private final List<String> columns;
@@ -23,12 +26,12 @@ public final class CassandraRowStream implements SQLRowStream, Comparable<Cassan
 
     private RowStreamStateWrapper stateWrapper;
 
-    public CassandraRowStream(int rowStreamId, ResultSet resultSet, WorkerExecutor workerExecutor,
-                              Set<SQLRowStream> allRowStreams, Function<Row, JsonArray> rowMapper) {
+    public CassandraRowStreamImpl(int rowStreamId, ResultSet resultSet, WorkerExecutor workerExecutor,
+                                  Set<SQLRowStream> allRowStreams, Function<Row, JsonArray> rowMapper) {
         this.resultSet = resultSet;
         this.rowStreamId = rowStreamId;
         this.columns = RowStreamHelper.columns(resultSet);
-        this.stateWrapper = RowStreamHelper.stateWrapper(workerExecutor, allRowStreams, rowMapper, this, columns, resultSet);
+        this.stateWrapper = stateWrapper(workerExecutor, allRowStreams, rowMapper, this, columns, resultSet);
     }
 
     @Override
@@ -46,9 +49,9 @@ public final class CassandraRowStream implements SQLRowStream, Comparable<Cassan
     @Override
     public SQLRowStream pause() {
         synchronized (this) {
-            State<RowStreamStateWrapper> currentState = stateWrapper.getState();
+            RowStreamState currentState = stateWrapper.getState();
 
-            if (currentState.type() == StateType.IS_EXECUTING) {
+            if (currentState.type() == RowStreamState.StateType.EXECUTING) {
                 currentState.pause(stateWrapper);
             } else {
                 // no need to pause since its already paused or closed
@@ -61,9 +64,9 @@ public final class CassandraRowStream implements SQLRowStream, Comparable<Cassan
     @Override
     public SQLRowStream resume() {
         synchronized (this) {
-            State<RowStreamStateWrapper> currentState = stateWrapper.getState();
+            RowStreamState currentState = stateWrapper.getState();
 
-            if (currentState.type() == StateType.IS_PAUSED) {
+            if (currentState.type() == RowStreamState.StateType.PAUSED) {
                 currentState.execute(stateWrapper);
             } else {
                 // no need to resume execution since already executing or closed
@@ -104,9 +107,9 @@ public final class CassandraRowStream implements SQLRowStream, Comparable<Cassan
         }
 
         synchronized (this) {
-            State<RowStreamStateWrapper> currentState = stateWrapper.getState();
+            RowStreamState currentState = stateWrapper.getState();
 
-            if (currentState.type() == StateType.IS_PAUSED) {
+            if (currentState.type() == RowStreamState.StateType.PAUSED) {
                 // restart execution since its currently paused
                 currentState.execute(stateWrapper);
             } else {
@@ -118,7 +121,7 @@ public final class CassandraRowStream implements SQLRowStream, Comparable<Cassan
     @Override
     public void close() {
         synchronized (this) {
-            State<RowStreamStateWrapper> currentState = stateWrapper.getState();
+            RowStreamState currentState = stateWrapper.getState();
             currentState.close(stateWrapper);
         }
     }
@@ -130,11 +133,16 @@ public final class CassandraRowStream implements SQLRowStream, Comparable<Cassan
     }
 
     @Override
+    public int getStreamId() {
+        return rowStreamId;
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        CassandraRowStream that = (CassandraRowStream) o;
+        CassandraRowStreamImpl that = (CassandraRowStreamImpl) o;
 
         return rowStreamId == that.rowStreamId;
     }
@@ -142,10 +150,5 @@ public final class CassandraRowStream implements SQLRowStream, Comparable<Cassan
     @Override
     public int hashCode() {
         return rowStreamId;
-    }
-
-    @Override
-    public int compareTo(CassandraRowStream that) {
-        return this.rowStreamId - that.rowStreamId;
     }
 }

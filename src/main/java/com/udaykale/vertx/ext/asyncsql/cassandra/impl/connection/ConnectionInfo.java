@@ -2,16 +2,19 @@ package com.udaykale.vertx.ext.asyncsql.cassandra.impl.connection;
 
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
+import com.udaykale.vertx.ext.asyncsql.cassandra.CassandraConnection;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.WorkerExecutor;
+import io.vertx.core.impl.ConcurrentHashSet;
 import io.vertx.ext.sql.SQLOptions;
 import io.vertx.ext.sql.SQLRowStream;
 
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -19,15 +22,24 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 final class ConnectionInfo {
 
+    static final int DEFAULT_QUERY_TIME_OUT = 10000;
+
+    private static final SQLOptions DEFAULT_SQL_OPTIONS = new SQLOptions()
+            .setQueryTimeout(DEFAULT_QUERY_TIME_OUT);
+
+    private final Set<SQLRowStream> allRowStreams = new ConcurrentHashSet<>();
+    private final AtomicInteger rowStreamId = new AtomicInteger(1);
+    private final AtomicBoolean isClosed = new AtomicBoolean(false);
+
+    private SQLOptions sqlOptions = DEFAULT_SQL_OPTIONS;
+
     private Context context;
     private Session session;
     private WorkerExecutor workerExecutor;
-    private Set<SQLRowStream> allRowStreams;
-    private Map<String, PreparedStatement> preparedStatementCache;
-    private AtomicInteger rowStreamId;
-
-    private SQLOptions sqlOptions;
+    private CassandraConnection connection;
     private Handler<AsyncResult<Void>> closeHandler;
+    private Set<CassandraConnection> allOpenConnections;
+    private Map<String, PreparedStatement> preparedStatementCache;
 
     private ConnectionInfo() {
     }
@@ -68,17 +80,33 @@ final class ConnectionInfo {
         return closeHandler;
     }
 
-    public static final class Builder {
+    Set<CassandraConnection> getAllOpenConnections() {
+        return allOpenConnections;
+    }
 
+    CassandraConnection getConnection() {
+        return connection;
+    }
+
+    boolean isConnected() {
+        return !isClosed.get();
+    }
+
+    void closeConnection() {
+        isClosed.set(true);
+    }
+
+    void setSqlOptions(SQLOptions sqlOptions) {
+        this.sqlOptions = sqlOptions;
+    }
+
+    public static final class Builder {
         private Context context;
         private Session session;
         private WorkerExecutor workerExecutor;
-        private Set<SQLRowStream> allRowStreams;
+        private CassandraConnection cassandraConnection;
+        private Set<CassandraConnection> allOpenConnections;
         private Map<String, PreparedStatement> preparedStatementCache;
-        private AtomicInteger rowStreamId;
-
-        private SQLOptions sqlOptions;
-        private Handler<AsyncResult<Void>> closeHandler;
 
         public Builder withContext(Context context) {
             this.context = Objects.requireNonNull(context);
@@ -95,28 +123,18 @@ final class ConnectionInfo {
             return this;
         }
 
-        public Builder withAllRowStreams(Set<SQLRowStream> allRowStreams) {
-            this.allRowStreams = Objects.requireNonNull(allRowStreams);
-            return this;
-        }
-
         public Builder withPreparedStatementCache(Map<String, PreparedStatement> preparedStatementCache) {
             this.preparedStatementCache = Objects.requireNonNull(preparedStatementCache);
             return this;
         }
 
-        public Builder withRowStreamId(AtomicInteger rowStreamId) {
-            this.rowStreamId = Objects.requireNonNull(rowStreamId);
+        public Builder withAllOpenConnections(Set<CassandraConnection> allOpenConnections) {
+            this.allOpenConnections = Objects.requireNonNull(allOpenConnections);
             return this;
         }
 
-        public Builder withSqlOptions(SQLOptions sqlOptions) {
-            this.sqlOptions = sqlOptions;
-            return this;
-        }
-
-        public Builder withCloseHandler(Handler<AsyncResult<Void>> closeHandler) {
-            this.closeHandler = closeHandler;
+        public Builder withCassandraConnection(CassandraConnection cassandraConnection) {
+            this.cassandraConnection = Objects.requireNonNull(cassandraConnection);
             return this;
         }
 
@@ -125,11 +143,9 @@ final class ConnectionInfo {
             connectionInfo.setContext(context);
             connectionInfo.setSession(session);
             connectionInfo.setWorkerExecutor(workerExecutor);
-            connectionInfo.setAllRowStreams(allRowStreams);
+            connectionInfo.setConnection(cassandraConnection);
+            connectionInfo.setAllOpenConnections(allOpenConnections);
             connectionInfo.setPreparedStatementCache(preparedStatementCache);
-            connectionInfo.setRowStreamId(rowStreamId);
-            connectionInfo.setSqlOptions(sqlOptions);
-            connectionInfo.setCloseHandler(closeHandler);
             return connectionInfo;
         }
     }
@@ -146,23 +162,19 @@ final class ConnectionInfo {
         this.workerExecutor = workerExecutor;
     }
 
-    private void setAllRowStreams(Set<SQLRowStream> allRowStreams) {
-        this.allRowStreams = allRowStreams;
-    }
-
     private void setPreparedStatementCache(Map<String, PreparedStatement> preparedStatementCache) {
         this.preparedStatementCache = preparedStatementCache;
     }
 
-    private void setRowStreamId(AtomicInteger rowStreamId) {
-        this.rowStreamId = rowStreamId;
+    private void setAllOpenConnections(Set<CassandraConnection> allOpenConnections) {
+        this.allOpenConnections = allOpenConnections;
     }
 
-    public void setSqlOptions(SQLOptions sqlOptions) {
-        this.sqlOptions = sqlOptions;
+    private void setConnection(CassandraConnection connection) {
+        this.connection = Objects.requireNonNull(connection);
     }
 
-    public void setCloseHandler(Handler<AsyncResult<Void>> closeHandler) {
-        this.closeHandler = closeHandler;
+    void setCloseHandler(Handler<AsyncResult<Void>> closeHandler) {
+        this.closeHandler = Objects.requireNonNull(closeHandler);
     }
 }
