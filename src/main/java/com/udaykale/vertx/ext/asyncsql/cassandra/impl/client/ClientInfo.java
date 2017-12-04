@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * @author uday
  */
-final class CassandraClientStateWrapper {
+final class ClientInfo {
 
     private Session session;
     private Context context;
@@ -31,7 +31,7 @@ final class CassandraClientStateWrapper {
     private final Set<CassandraConnection> allOpenConnections;
     private final Map<String, PreparedStatement> preparedStatementCache;
 
-    private CassandraClientStateWrapper(CassandraClient cassandraClient) {
+    private ClientInfo(CassandraClient cassandraClient) {
         this.allOpenConnections = new ConcurrentHashSet<>();
         this.preparedStatementCache = new ConcurrentHashMap<>();
         this.connectionIdGenerator = new AtomicInteger(1);
@@ -119,12 +119,12 @@ final class CassandraClientStateWrapper {
             return this;
         }
 
-        public CassandraClientStateWrapper build() {
-            CassandraClientStateWrapper stateWrapper = new CassandraClientStateWrapper(cassandraClient);
-            stateWrapper.workerExecutor = workerExecutor;
-            stateWrapper.session = session;
-            stateWrapper.context = context;
-            return stateWrapper;
+        public ClientInfo build() {
+            ClientInfo clientInfo = new ClientInfo(cassandraClient);
+            clientInfo.workerExecutor = workerExecutor;
+            clientInfo.session = session;
+            clientInfo.context = context;
+            return clientInfo;
         }
     }
 }

@@ -23,11 +23,11 @@ public final class CassandraClientImpl implements CassandraClient {
 
     private final Context context;
     private final String clientName;
-    private final CassandraClientStateWrapper stateWrapper;
+    private final ClientInfo clientInfo;
 
     CassandraClientImpl(Context context, Session session, WorkerExecutor workerExecutor, String clientName) {
         this.clientName = Objects.requireNonNull(clientName);
-        stateWrapper = CassandraClientStateWrapper.builder(this)
+        clientInfo = ClientInfo.builder(this)
                 .withSession(session)
                 .withContext(context)
                 .withWorkerExecutor(workerExecutor)
@@ -44,11 +44,11 @@ public final class CassandraClientImpl implements CassandraClient {
     @Override
     public SQLClient getConnection(Handler<AsyncResult<SQLConnection>> handler) {
         synchronized (this) {
-            CassandraClientState currentState = stateWrapper.getCurrentCassandraClientState();
+            CassandraClientState currentState = clientInfo.getCurrentCassandraClientState();
 
             // check if connection can be created
             if (currentState.type() == CREATING_CONNECTION) {
-                Future<SQLConnection> result = currentState.createConnection(stateWrapper);
+                Future<SQLConnection> result = currentState.createConnection(clientInfo);
                 context.runOnContext(action -> result.setHandler(handler));
             } else {
                 // connection is closed
@@ -62,17 +62,17 @@ public final class CassandraClientImpl implements CassandraClient {
 
     @Override
     public void close(Handler<AsyncResult<Void>> closeHandler) {
-        stateWrapper.setCloseHandler(closeHandler);
+        clientInfo.setCloseHandler(closeHandler);
         close();
     }
 
     @Override
     public void close() {
         synchronized (this) {
-            CassandraClientState currentState = stateWrapper.getCurrentCassandraClientState();
+            CassandraClientState currentState = clientInfo.getCurrentCassandraClientState();
 
             if (currentState.type() == CREATING_CONNECTION) {
-                currentState.close(stateWrapper);
+                currentState.close(clientInfo);
             }  // Connection already closed nothing, needed to be done in else part
 
         }

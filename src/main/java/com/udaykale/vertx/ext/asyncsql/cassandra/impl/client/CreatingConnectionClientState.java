@@ -33,15 +33,15 @@ final class CreatingConnectionClientState implements CassandraClientState {
     }
 
     @Override
-    public void close(CassandraClientStateWrapper stateWrapper) {
-        WorkerExecutor workerExecutor = stateWrapper.getWorkerExecutor();
-        stateWrapper.setState(ClosedClientState.instance());
+    public void close(ClientInfo clientInfo) {
+        WorkerExecutor workerExecutor = clientInfo.getWorkerExecutor();
+        clientInfo.setState(ClosedClientState.instance());
 
         workerExecutor.executeBlocking(blockingFuture -> {
             try {
                 synchronized (cassandraClient) {
                     cassandraClient.notify();
-                    stateWrapper.closeAllOpenConnections();
+                    clientInfo.closeAllOpenConnections();
                     blockingFuture.complete();
                 }
             } catch (Exception e) {
@@ -56,27 +56,27 @@ final class CreatingConnectionClientState implements CassandraClientState {
                 result.complete();
             }
 
-            Handler<AsyncResult<Void>> closeHandler = stateWrapper.getCloseHandler();
-            Context context = stateWrapper.getContext();
+            Handler<AsyncResult<Void>> closeHandler = clientInfo.getCloseHandler();
+            Context context = clientInfo.getContext();
             context.runOnContext(action -> result.setHandler(closeHandler));
         });
     }
 
     @Override
-    public Future<SQLConnection> createConnection(CassandraClientStateWrapper stateWrapper) {
+    public Future<SQLConnection> createConnection(ClientInfo clientInfo) {
         Future<SQLConnection> result = Future.future();
-        Context context = stateWrapper.getContext();
-        Session session = stateWrapper.getSession();
-        WorkerExecutor workerExecutor = stateWrapper.getWorkerExecutor();
-        Set<CassandraConnection> allOpenConnections = stateWrapper.getAllOpenConnections();
-        Map<String, PreparedStatement> preparedStatementCache = stateWrapper.getPreparedStatementCache();
+        Context context = clientInfo.getContext();
+        Session session = clientInfo.getSession();
+        WorkerExecutor workerExecutor = clientInfo.getWorkerExecutor();
+        Set<CassandraConnection> allOpenConnections = clientInfo.getAllOpenConnections();
+        Map<String, PreparedStatement> preparedStatementCache = clientInfo.getPreparedStatementCache();
 
         // create a new connection
-        int connectionId = stateWrapper.generateConnectionId();
+        int connectionId = clientInfo.generateConnectionId();
         // add it to list instance ongoing connections
         CassandraConnection connection = new CassandraConnectionImpl(connectionId, context,
                 allOpenConnections, session, workerExecutor, preparedStatementCache);
-        stateWrapper.addConnection(connection);
+        clientInfo.addConnection(connection);
         result.complete(connection);
 
         return result;

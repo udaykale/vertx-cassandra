@@ -16,12 +16,12 @@ final class ClosedClientState implements CassandraClientState {
     }
 
     @Override
-    public void close(CassandraClientStateWrapper stateWrapper) {
+    public void close(ClientInfo clientInfo) {
         throw new IllegalStateException("Cannot re-close client when it is already closed");
     }
 
     @Override
-    public Future<SQLConnection> createConnection(CassandraClientStateWrapper stateWrapper) {
+    public Future<SQLConnection> createConnection(ClientInfo clientInfo) {
         throw new IllegalStateException("Cannot create connection when client is already closed");
     }
 

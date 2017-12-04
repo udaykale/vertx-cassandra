@@ -8,9 +8,9 @@ import io.vertx.ext.sql.SQLConnection;
  */
 interface CassandraClientState {
 
-    void close(CassandraClientStateWrapper stateWrapper);
+    void close(ClientInfo clientInfo);
 
-    Future<SQLConnection> createConnection(CassandraClientStateWrapper stateWrapper);
+    Future<SQLConnection> createConnection(ClientInfo clientInfo);
 
     StateType type();
 
