@@ -41,10 +41,7 @@ final class CreatingConnectionClientState implements CassandraClientState {
             try {
                 synchronized (cassandraClient) {
                     cassandraClient.notify();
-                    Set<CassandraConnection> cassandraConnections = stateWrapper.getAllOpenConnections();
-                    for (CassandraConnection cassandraConnection : cassandraConnections) {
-                        cassandraConnection.close();
-                    }
+                    stateWrapper.closeAllOpenConnections();
                     blockingFuture.complete();
                 }
             } catch (Exception e) {

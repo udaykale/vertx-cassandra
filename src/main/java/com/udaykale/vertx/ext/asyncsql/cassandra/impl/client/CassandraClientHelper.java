@@ -34,7 +34,7 @@ final class CassandraClientHelper {
                 Session session = createSession(cluster, keySpace);
                 WorkerExecutor workerExecutor = vertx.createSharedWorkerExecutor(clientName);
                 Context context = vertx.getOrCreateContext();
-                cassandraClient = new CassandraClientImpl(context, session, workerExecutor);
+                cassandraClient = new CassandraClientImpl(context, session, workerExecutor, clientName);
                 sharedDataMap.put(baseName, cassandraClient);
             }
         }
@@ -45,10 +45,10 @@ final class CassandraClientHelper {
     private static Session createSession(Cluster cluster, String keySpace) {
         Session session;
 
-        if (!keySpace.isEmpty()) {
-            session = cluster.connect(keySpace);
-        } else {
+        if (keySpace.isEmpty()) {
             session = cluster.connect();
+        } else {
+            session = cluster.connect(keySpace);
         }
 
         return session;

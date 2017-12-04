@@ -51,13 +51,8 @@ final class CassandraStatementHelper {
     private static BoundStatement generateBoundStatement(String query, JsonArray params,
                                                          Session session, SQLOptions sqlOptions,
                                                          Map<String, PreparedStatement> preparedStatementCache) {
+        preparedStatementCache.computeIfAbsent(query, session::prepare);
         PreparedStatement preparedStatement = preparedStatementCache.get(query);
-
-        if (preparedStatement == null) {
-            preparedStatement = session.prepare(query);
-            preparedStatementCache.put(query, preparedStatement);
-        }
-
         BoundStatement boundStatement = preparedStatement.bind();
         boundStatement.bind(params.stream().toArray());
         boundStatement.setReadTimeoutMillis(sqlOptions.getQueryTimeout());
@@ -86,9 +81,9 @@ final class CassandraStatementHelper {
             Statement statement;
 
             if (param == null || param.isEmpty()) {
-                statement = generateBoundStatement(query, param, session, sqlOptions, preparedStatementCache);
-            } else {
                 statement = generateSimpleStatement(query, sqlOptions);
+            } else {
+                statement = generateBoundStatement(query, param, session, sqlOptions, preparedStatementCache);
             }
 
             batchStatement.add(statement);

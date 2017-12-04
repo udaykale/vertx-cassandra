@@ -23,9 +23,7 @@ final class RowStreamCloseHelper {
         stateWrapper.getAllRowStreams().remove(sqlRowStream);
         Handler<AsyncResult<Void>> closeHandler = stateWrapper.getCloseHandler();
 
-        if (closeHandler == null) {
-            // do nothing
-        } else {
+        if (closeHandler != null) {
             stateWrapper.getWorkerExecutor().executeBlocking(future -> {
                 try {
                     closeHandler.handle(null);
@@ -43,6 +41,7 @@ final class RowStreamCloseHelper {
                     });
                 }
             });
-        }
+        }  // do nothing in else part
+
     }
 }

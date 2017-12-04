@@ -2,15 +2,18 @@ package com.udaykale.vertx.ext.asyncsql.cassandra.impl.client;
 
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
+import com.udaykale.vertx.ext.asyncsql.cassandra.CassandraClient;
 import com.udaykale.vertx.ext.asyncsql.cassandra.CassandraConnection;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.WorkerExecutor;
+import io.vertx.core.impl.ConcurrentHashSet;
 
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -21,75 +24,85 @@ final class CassandraClientStateWrapper {
     private Session session;
     private Context context;
     private WorkerExecutor workerExecutor;
-    private Map<String, PreparedStatement> preparedStatementCache;
-
     private Handler<AsyncResult<Void>> closeHandler;
-    private AtomicInteger connectionIdGenerator;
-    private CassandraClientState currentCassandraClientState;
-    private Set<CassandraConnection> allOpenConnections;
+    private CassandraClientState clientState;
 
-    private CassandraClientStateWrapper() {
+    private final AtomicInteger connectionIdGenerator;
+    private final Set<CassandraConnection> allOpenConnections;
+    private final Map<String, PreparedStatement> preparedStatementCache;
+
+    private CassandraClientStateWrapper(CassandraClient cassandraClient) {
+        this.allOpenConnections = new ConcurrentHashSet<>();
+        this.preparedStatementCache = new ConcurrentHashMap<>();
+        this.connectionIdGenerator = new AtomicInteger(1);
+        this.clientState = CreatingConnectionClientState.instance(cassandraClient);
     }
 
-    static Builder builder() {
-        return new Builder();
+    static Builder builder(CassandraClient cassandraClient) {
+        return new Builder(cassandraClient);
     }
 
-    public Session getSession() {
+    Session getSession() {
         return session;
     }
 
-    public Context getContext() {
+    Context getContext() {
         return context;
     }
 
-    public WorkerExecutor getWorkerExecutor() {
+    WorkerExecutor getWorkerExecutor() {
         return workerExecutor;
     }
 
-    public Map<String, PreparedStatement> getPreparedStatementCache() {
+    Map<String, PreparedStatement> getPreparedStatementCache() {
         return preparedStatementCache;
     }
 
-    public Handler<AsyncResult<Void>> getCloseHandler() {
+    Handler<AsyncResult<Void>> getCloseHandler() {
         return closeHandler;
     }
 
-    public int generateConnectionId() {
+    int generateConnectionId() {
         return connectionIdGenerator.getAndIncrement();
     }
 
-    public CassandraClientState getCurrentCassandraClientState() {
-        return currentCassandraClientState;
+    CassandraClientState getCurrentCassandraClientState() {
+        return clientState;
     }
 
-    public void addConnection(CassandraConnection connection) {
+    void addConnection(CassandraConnection connection) {
         Objects.requireNonNull(connection);
         allOpenConnections.add(connection);
     }
 
-    public void setState(CassandraClientState currentCassandraClientState) {
-        this.currentCassandraClientState = Objects.requireNonNull(currentCassandraClientState);
+    void closeAllOpenConnections() {
+        for (CassandraConnection cassandraConnection : allOpenConnections) {
+            cassandraConnection.close();
+        }
+    }
+
+    void setCloseHandler(Handler<AsyncResult<Void>> closeHandler) {
+        this.closeHandler = Objects.requireNonNull(closeHandler);
+    }
+
+    public void setState(CassandraClientState clientState) {
+        this.clientState = Objects.requireNonNull(clientState);
     }
 
     public Set<CassandraConnection> getAllOpenConnections() {
         return allOpenConnections;
     }
 
-    public void setCloseHandler(Handler<AsyncResult<Void>> closeHandler) {
-        this.closeHandler = Objects.requireNonNull(closeHandler);
-    }
-
     static final class Builder {
+        private final CassandraClient cassandraClient;
+
         private Session session;
         private Context context;
         private WorkerExecutor workerExecutor;
-        private CassandraClientState currentCassandraClientState;
-        private Map<String, PreparedStatement> preparedStatementCache;
 
-        private Handler<AsyncResult<Void>> closeHandler;
-        private AtomicInteger connectionIdGenerator;
-        private Set<CassandraConnection> allOpenConnections;
+        private Builder(CassandraClient cassandraClient) {
+            this.cassandraClient = Objects.requireNonNull(cassandraClient);
+        }
 
         public Builder withSession(Session session) {
             this.session = Objects.requireNonNull(session);
@@ -106,42 +119,12 @@ final class CassandraClientStateWrapper {
             return this;
         }
 
-        public Builder withCurrentCassandraClientState(CassandraClientState currentCassandraClientState) {
-            this.currentCassandraClientState = Objects.requireNonNull(currentCassandraClientState);
-            return this;
-        }
-
-        public Builder withPreparedStatementCache(Map<String, PreparedStatement> preparedStatementCache) {
-            this.preparedStatementCache = Objects.requireNonNull(preparedStatementCache);
-            return this;
-        }
-
-        public Builder withCloseHandler(Handler<AsyncResult<Void>> closeHandler) {
-            this.closeHandler = Objects.requireNonNull(closeHandler);
-            return this;
-        }
-
-        public Builder withConnectionIdGenerator(AtomicInteger connectionIdGenerator) {
-            this.connectionIdGenerator = Objects.requireNonNull(connectionIdGenerator);
-            return this;
-        }
-
-        public Builder withAllOpenConnections(Set<CassandraConnection> allOpenConnections) {
-            this.allOpenConnections = Objects.requireNonNull(allOpenConnections);
-            return this;
-        }
-
         public CassandraClientStateWrapper build() {
-            CassandraClientStateWrapper cassandraClientStateWrapper = new CassandraClientStateWrapper();
-            cassandraClientStateWrapper.session = session;
-            cassandraClientStateWrapper.context = context;
-            cassandraClientStateWrapper.workerExecutor = workerExecutor;
-            cassandraClientStateWrapper.currentCassandraClientState = currentCassandraClientState;
-            cassandraClientStateWrapper.preparedStatementCache = preparedStatementCache;
-            cassandraClientStateWrapper.closeHandler = closeHandler;
-            cassandraClientStateWrapper.connectionIdGenerator = connectionIdGenerator;
-            cassandraClientStateWrapper.allOpenConnections = allOpenConnections;
-            return cassandraClientStateWrapper;
+            CassandraClientStateWrapper stateWrapper = new CassandraClientStateWrapper(cassandraClient);
+            stateWrapper.workerExecutor = workerExecutor;
+            stateWrapper.session = session;
+            stateWrapper.context = context;
+            return stateWrapper;
         }
     }
 }

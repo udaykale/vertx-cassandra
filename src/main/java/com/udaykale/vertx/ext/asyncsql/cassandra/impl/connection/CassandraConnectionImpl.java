@@ -21,9 +21,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.connection.CassandraConnectionHelper.emptyListIfNull;
@@ -51,13 +48,12 @@ public final class CassandraConnectionImpl implements CassandraConnection {
                                    Map<String, PreparedStatement> preparedStatementCache) {
         this.connectionId = connectionId;
         this.context = Objects.requireNonNull(context);
-        this.connectionInfo = ConnectionInfo.builder()
+        this.connectionInfo = ConnectionInfo.builder(this)
                 .withContext(context)
                 .withSession(session)
                 .withWorkerExecutor(workerExecutor)
                 .withAllOpenConnections(allOpenConnections)
                 .withPreparedStatementCache(preparedStatementCache)
-                .withCassandraConnection(this)
                 .build();
     }
 
@@ -221,9 +217,8 @@ public final class CassandraConnectionImpl implements CassandraConnection {
 
             if (closeHandler != null) {
                 context.runOnContext(v -> closeHandler.handle(Future.succeededFuture()));
-            } else {
-                // do nothing
-            }
+            }  // do nothing for else part
+
         } else {
             throw new IllegalStateException("Cannot re-close connection when it is already closed");
         }

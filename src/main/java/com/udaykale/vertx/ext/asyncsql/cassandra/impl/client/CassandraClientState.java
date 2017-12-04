@@ -15,6 +15,6 @@ interface CassandraClientState {
     StateType type();
 
     enum StateType {
-        CREATING_CONNECTION, CLOSED;
+        CREATING_CONNECTION, CLOSED
     }
 }

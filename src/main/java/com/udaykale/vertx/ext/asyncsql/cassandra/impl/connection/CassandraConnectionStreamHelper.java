@@ -45,9 +45,8 @@ final class CassandraConnectionStreamHelper {
                 workerExecutor.executeBlocking((Handler<Future<SQLRowStream>>) future ->
                                 executeQueryAndStream(connectionInfo, queries, params, rowMapper, future),
                         future -> executeQueryAndStreamHandler(handler, future, context));
-            } else {
-                // connection is closed, do nothing
-            }
+            }  // connection is closed, do nothing in else part
+
         }
     }
 

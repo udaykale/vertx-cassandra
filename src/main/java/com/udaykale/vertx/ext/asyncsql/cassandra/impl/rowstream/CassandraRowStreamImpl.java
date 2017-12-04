@@ -24,7 +24,7 @@ public final class CassandraRowStreamImpl implements CassandraRowStream {
     private final List<String> columns;
     private final int rowStreamId;
 
-    private RowStreamStateWrapper stateWrapper;
+    private final RowStreamStateWrapper stateWrapper;
 
     public CassandraRowStreamImpl(int rowStreamId, ResultSet resultSet, WorkerExecutor workerExecutor,
                                   Set<SQLRowStream> allRowStreams, Function<Row, JsonArray> rowMapper) {
@@ -53,9 +53,8 @@ public final class CassandraRowStreamImpl implements CassandraRowStream {
 
             if (currentState.type() == RowStreamState.StateType.EXECUTING) {
                 currentState.pause(stateWrapper);
-            } else {
-                // no need to pause since its already paused or closed
-            }
+            }  // no need to pause since its already paused or closed so no else part
+
         }
 
         return this;
@@ -68,9 +67,8 @@ public final class CassandraRowStreamImpl implements CassandraRowStream {
 
             if (currentState.type() == RowStreamState.StateType.PAUSED) {
                 currentState.execute(stateWrapper);
-            } else {
-                // no need to resume execution since already executing or closed
-            }
+            }  // no need to resume execution since already executing or closed so no else part
+
         }
 
         return this;
@@ -105,17 +103,7 @@ public final class CassandraRowStreamImpl implements CassandraRowStream {
         if (!wasLastPage) {
             resultSet.fetchMoreResults();
         }
-
-        synchronized (this) {
-            RowStreamState currentState = stateWrapper.getState();
-
-            if (currentState.type() == RowStreamState.StateType.PAUSED) {
-                // restart execution since its currently paused
-                currentState.execute(stateWrapper);
-            } else {
-                // no need to resume execution since already executing or closed
-            }
-        }
+        resume();
     }
 
     @Override

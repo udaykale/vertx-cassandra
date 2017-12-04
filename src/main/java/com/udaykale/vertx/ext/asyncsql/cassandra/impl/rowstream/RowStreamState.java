@@ -14,6 +14,6 @@ public interface RowStreamState {
     StateType type();
 
     enum StateType {
-        EXECUTING, PAUSED, CLOSED;
+        EXECUTING, PAUSED, CLOSED
     }
 }

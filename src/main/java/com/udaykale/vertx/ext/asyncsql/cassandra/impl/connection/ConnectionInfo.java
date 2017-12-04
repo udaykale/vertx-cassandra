@@ -27,6 +27,7 @@ final class ConnectionInfo {
     private static final SQLOptions DEFAULT_SQL_OPTIONS = new SQLOptions()
             .setQueryTimeout(DEFAULT_QUERY_TIME_OUT);
 
+    private final CassandraConnection cassandraConnection;
     private final Set<SQLRowStream> allRowStreams = new ConcurrentHashSet<>();
     private final AtomicInteger rowStreamId = new AtomicInteger(1);
     private final AtomicBoolean isClosed = new AtomicBoolean(false);
@@ -36,16 +37,16 @@ final class ConnectionInfo {
     private Context context;
     private Session session;
     private WorkerExecutor workerExecutor;
-    private CassandraConnection connection;
     private Handler<AsyncResult<Void>> closeHandler;
     private Set<CassandraConnection> allOpenConnections;
     private Map<String, PreparedStatement> preparedStatementCache;
 
-    private ConnectionInfo() {
+    private ConnectionInfo(CassandraConnection cassandraConnection) {
+        this.cassandraConnection = cassandraConnection;
     }
 
-    static ConnectionInfo.Builder builder() {
-        return new ConnectionInfo.Builder();
+    static ConnectionInfo.Builder builder(CassandraConnection cassandraConnection) {
+        return new ConnectionInfo.Builder(cassandraConnection);
     }
 
     Context getContext() {
@@ -85,7 +86,7 @@ final class ConnectionInfo {
     }
 
     CassandraConnection getConnection() {
-        return connection;
+        return cassandraConnection;
     }
 
     boolean isConnected() {
@@ -104,9 +105,13 @@ final class ConnectionInfo {
         private Context context;
         private Session session;
         private WorkerExecutor workerExecutor;
-        private CassandraConnection cassandraConnection;
         private Set<CassandraConnection> allOpenConnections;
+        private final CassandraConnection cassandraConnection;
         private Map<String, PreparedStatement> preparedStatementCache;
+
+        Builder(CassandraConnection cassandraConnection) {
+            this.cassandraConnection = Objects.requireNonNull(cassandraConnection);
+        }
 
         public Builder withContext(Context context) {
             this.context = Objects.requireNonNull(context);
@@ -133,17 +138,11 @@ final class ConnectionInfo {
             return this;
         }
 
-        public Builder withCassandraConnection(CassandraConnection cassandraConnection) {
-            this.cassandraConnection = Objects.requireNonNull(cassandraConnection);
-            return this;
-        }
-
         public ConnectionInfo build() {
-            ConnectionInfo connectionInfo = new ConnectionInfo();
+            ConnectionInfo connectionInfo = new ConnectionInfo(cassandraConnection);
             connectionInfo.setContext(context);
             connectionInfo.setSession(session);
             connectionInfo.setWorkerExecutor(workerExecutor);
-            connectionInfo.setConnection(cassandraConnection);
             connectionInfo.setAllOpenConnections(allOpenConnections);
             connectionInfo.setPreparedStatementCache(preparedStatementCache);
             return connectionInfo;
@@ -168,10 +167,6 @@ final class ConnectionInfo {
 
     private void setAllOpenConnections(Set<CassandraConnection> allOpenConnections) {
         this.allOpenConnections = allOpenConnections;
-    }
-
-    private void setConnection(CassandraConnection connection) {
-        this.connection = Objects.requireNonNull(connection);
     }
 
     void setCloseHandler(Handler<AsyncResult<Void>> closeHandler) {

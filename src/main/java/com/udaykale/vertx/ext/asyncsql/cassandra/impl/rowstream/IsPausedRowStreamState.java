@@ -9,7 +9,8 @@ import io.vertx.ext.sql.SQLRowStream;
 
 import java.util.Objects;
 
-import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream.RowStreamState.StateType.*;
+import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream.RowStreamState.StateType.EXECUTING;
+import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream.RowStreamState.StateType.PAUSED;
 
 /**
  * @author uday
@@ -81,18 +82,16 @@ final class IsPausedRowStreamState implements RowStreamState {
                                 sqlRowStream.notify(); // leave the lock on wrapper
                                 // call result set closed handler when a page is read
                                 stateWrapper.getResultSetClosedHandler().handle(null);
-                            } else {
-                                // all other states (paused, closed) are not required to be handled
-                            }
+                            }  // all other states (paused, closed) are not required to be handled in else part
+
                         }
                     }
                     future.complete();
                 } else {
-                    // process the exception
-                    stateWrapper.getExceptionHandler().handle(readPageResultFuture.cause());
-                    future.fail(readPageResultFuture.cause());
+                    throw new Exception(readPageResultFuture.cause());
                 }
             } catch (Exception e) {
+                // process the exception
                 stateWrapper.getExceptionHandler().handle(e);
                 future.fail(e);
             }

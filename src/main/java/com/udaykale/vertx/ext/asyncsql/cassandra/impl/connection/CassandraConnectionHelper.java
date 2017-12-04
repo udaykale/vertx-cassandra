@@ -1,31 +1,21 @@
 package com.udaykale.vertx.ext.asyncsql.cassandra.impl.connection;
 
-import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Row;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.Statement;
 import com.udaykale.vertx.ext.asyncsql.cassandra.CassandraConnection;
-import com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream.CassandraRowStreamImpl;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.WorkerExecutor;
 import io.vertx.core.json.JsonArray;
 import io.vertx.ext.sql.ResultSet;
-import io.vertx.ext.sql.SQLOptions;
 import io.vertx.ext.sql.SQLRowStream;
 import io.vertx.ext.sql.UpdateResult;
 
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
-import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.connection.CassandraStatementHelper.generateStatement;
 import static java.util.Collections.EMPTY_LIST;
 import static java.util.Collections.nCopies;
 import static java.util.Collections.singletonList;

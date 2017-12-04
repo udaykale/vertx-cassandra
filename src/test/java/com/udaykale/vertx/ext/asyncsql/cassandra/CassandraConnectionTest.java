@@ -16,7 +16,7 @@ import org.junit.runner.RunWith;
 public class CassandraConnectionTest {
 
     private final Cluster cluster = Cluster.builder().addContactPoint("localhost").build();
-    private final SQLClient sqlClient = CassandraClient.createShared(Vertx.vertx(), "client1", cluster, "test");
+    private final SQLClient sqlClient = CassandraClient.createShared(Vertx.vertx(), "client1", cluster, "createNonShared");
 
     @Test
     public void query10000Elements(TestContext context) {
