@@ -1,6 +1,9 @@
 package com.udaykale.vertx.ext.asyncsql.cassandra.impl.client;
 
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.ext.sql.SQLConnection;
 
 /**
@@ -21,12 +24,10 @@ final class ClosedClientState implements CassandraClientState {
     }
 
     @Override
-    public Future<SQLConnection> createConnection(ClientInfo clientInfo) {
-        throw new IllegalStateException("Cannot create connection when client is already closed");
-    }
-
-    @Override
-    public StateType type() {
-        return StateType.CLOSED;
+    public void createConnection(ClientInfo clientInfo, Handler<AsyncResult<SQLConnection>> handler) {
+        Context context = clientInfo.getContext();
+        Exception e = new IllegalStateException("Cannot create connection when client is already closed");
+        Future<SQLConnection> result = Future.failedFuture(e);
+        context.runOnContext(action -> result.setHandler(handler));
     }
 }

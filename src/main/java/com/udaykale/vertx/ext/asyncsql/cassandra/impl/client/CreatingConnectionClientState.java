@@ -13,9 +13,8 @@ import io.vertx.core.WorkerExecutor;
 import io.vertx.ext.sql.SQLConnection;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
-
-import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.client.CassandraClientState.StateType.CREATING_CONNECTION;
 
 /**
  * @author uday
@@ -37,7 +36,7 @@ final class CreatingConnectionClientState implements CassandraClientState {
         WorkerExecutor workerExecutor = clientInfo.getWorkerExecutor();
         clientInfo.setState(ClosedClientState.instance());
 
-        workerExecutor.executeBlocking(blockingFuture -> {
+        workerExecutor.executeBlocking((Future<Void> blockingFuture) -> {
             try {
                 synchronized (cassandraClient) {
                     cassandraClient.notify();
@@ -56,15 +55,16 @@ final class CreatingConnectionClientState implements CassandraClientState {
                 result.complete();
             }
 
-            Handler<AsyncResult<Void>> closeHandler = clientInfo.getCloseHandler();
-            Context context = clientInfo.getContext();
-            context.runOnContext(action -> result.setHandler(closeHandler));
+            Optional<Handler<AsyncResult<Void>>> closeHandler = clientInfo.getCloseHandler();
+            if (closeHandler.isPresent()) {
+                Context context = clientInfo.getContext();
+                context.runOnContext(action -> result.setHandler(closeHandler.get()));
+            } // nothing to do in else part
         });
     }
 
     @Override
-    public Future<SQLConnection> createConnection(ClientInfo clientInfo) {
-        Future<SQLConnection> result = Future.future();
+    public void createConnection(ClientInfo clientInfo, Handler<AsyncResult<SQLConnection>> handler) {
         Context context = clientInfo.getContext();
         Session session = clientInfo.getSession();
         WorkerExecutor workerExecutor = clientInfo.getWorkerExecutor();
@@ -77,13 +77,8 @@ final class CreatingConnectionClientState implements CassandraClientState {
         CassandraConnection connection = new CassandraConnectionImpl(connectionId, context,
                 allOpenConnections, session, workerExecutor, preparedStatementCache);
         clientInfo.addConnection(connection);
-        result.complete(connection);
 
-        return result;
-    }
-
-    @Override
-    public StateType type() {
-        return CREATING_CONNECTION;
+        Future<SQLConnection> result = Future.succeededFuture(connection);
+        context.runOnContext(v -> handler.handle(result));
     }
 }

@@ -5,7 +5,6 @@ import com.datastax.driver.core.Session;
 import com.udaykale.vertx.ext.asyncsql.cassandra.CassandraClient;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
-import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.WorkerExecutor;
@@ -14,14 +13,11 @@ import io.vertx.ext.sql.SQLConnection;
 
 import java.util.Objects;
 
-import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.client.CassandraClientState.StateType.CREATING_CONNECTION;
-
 /**
  * @author uday
  */
 public final class CassandraClientImpl implements CassandraClient {
 
-    private final Context context;
     private final String clientName;
     private final ClientInfo clientInfo;
 
@@ -32,7 +28,6 @@ public final class CassandraClientImpl implements CassandraClient {
                 .withContext(context)
                 .withWorkerExecutor(workerExecutor)
                 .build();
-        this.context = context;
     }
 
     public static CassandraClient getOrCreateCassandraClient(Vertx vertx, Cluster cluster,
@@ -43,19 +38,9 @@ public final class CassandraClientImpl implements CassandraClient {
 
     @Override
     public SQLClient getConnection(Handler<AsyncResult<SQLConnection>> handler) {
+        Objects.requireNonNull(handler);
         synchronized (this) {
-            CassandraClientState currentState = clientInfo.getCurrentCassandraClientState();
-
-            // check if connection can be created
-            if (currentState.type() == CREATING_CONNECTION) {
-                Future<SQLConnection> result = currentState.createConnection(clientInfo);
-                context.runOnContext(action -> result.setHandler(handler));
-            } else {
-                // connection is closed
-                Exception e = new IllegalStateException("Cannot create a connection when client is closed");
-                Future<SQLConnection> result = Future.failedFuture(e);
-                context.runOnContext(action -> result.setHandler(handler));
-            }
+            clientInfo.getState().createConnection(clientInfo, handler);
         }
         return this;
     }
@@ -69,19 +54,15 @@ public final class CassandraClientImpl implements CassandraClient {
     @Override
     public void close() {
         synchronized (this) {
-            CassandraClientState currentState = clientInfo.getCurrentCassandraClientState();
-
-            if (currentState.type() == CREATING_CONNECTION) {
-                currentState.close(clientInfo);
-            }  // Connection already closed nothing, needed to be done in else part
-
+            clientInfo.getState().close(clientInfo);
         }
     }
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         CassandraClientImpl that = (CassandraClientImpl) o;
         return Objects.equals(clientName, that.clientName);
     }

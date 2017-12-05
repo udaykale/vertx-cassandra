@@ -12,6 +12,7 @@ import io.vertx.core.impl.ConcurrentHashSet;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -24,8 +25,8 @@ final class ClientInfo {
     private Session session;
     private Context context;
     private WorkerExecutor workerExecutor;
-    private Handler<AsyncResult<Void>> closeHandler;
     private CassandraClientState clientState;
+    private Handler<AsyncResult<Void>> closeHandler;
 
     private final AtomicInteger connectionIdGenerator;
     private final Set<CassandraConnection> allOpenConnections;
@@ -58,15 +59,19 @@ final class ClientInfo {
         return preparedStatementCache;
     }
 
-    Handler<AsyncResult<Void>> getCloseHandler() {
-        return closeHandler;
+    Optional<Handler<AsyncResult<Void>>> getCloseHandler() {
+        return Optional.ofNullable(closeHandler);
     }
 
     int generateConnectionId() {
         return connectionIdGenerator.getAndIncrement();
     }
 
-    CassandraClientState getCurrentCassandraClientState() {
+    public Set<CassandraConnection> getAllOpenConnections() {
+        return allOpenConnections;
+    }
+
+    CassandraClientState getState() {
         return clientState;
     }
 
@@ -87,10 +92,6 @@ final class ClientInfo {
 
     public void setState(CassandraClientState clientState) {
         this.clientState = Objects.requireNonNull(clientState);
-    }
-
-    public Set<CassandraConnection> getAllOpenConnections() {
-        return allOpenConnections;
     }
 
     static final class Builder {
@@ -121,9 +122,9 @@ final class ClientInfo {
 
         public ClientInfo build() {
             ClientInfo clientInfo = new ClientInfo(cassandraClient);
-            clientInfo.workerExecutor = workerExecutor;
-            clientInfo.session = session;
-            clientInfo.context = context;
+            clientInfo.workerExecutor = Objects.requireNonNull(workerExecutor);
+            clientInfo.session = Objects.requireNonNull(session);
+            clientInfo.context = Objects.requireNonNull(context);
             return clientInfo;
         }
     }

@@ -1,6 +1,7 @@
 package com.udaykale.vertx.ext.asyncsql.cassandra.impl.client;
 
-import io.vertx.core.Future;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
 import io.vertx.ext.sql.SQLConnection;
 
 /**
@@ -10,11 +11,5 @@ interface CassandraClientState {
 
     void close(ClientInfo clientInfo);
 
-    Future<SQLConnection> createConnection(ClientInfo clientInfo);
-
-    StateType type();
-
-    enum StateType {
-        CREATING_CONNECTION, CLOSED
-    }
+    void createConnection(ClientInfo clientInfo, Handler<AsyncResult<SQLConnection>> handler);
 }
