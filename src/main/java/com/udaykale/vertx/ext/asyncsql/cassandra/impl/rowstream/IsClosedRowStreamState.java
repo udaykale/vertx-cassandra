@@ -13,17 +13,17 @@ final class IsClosedRowStreamState implements RowStreamState {
     }
 
     @Override
-    public void close(RowStreamStateWrapper stateWrapper) {
+    public void close(RowStreamInfo rowStreamInfo) {
         throw new IllegalStateException("Cannot re-close when stream is already closed");
     }
 
     @Override
-    public void execute(RowStreamStateWrapper stateWrapper) {
+    public void execute(RowStreamInfo rowStreamInfo) {
         throw new IllegalStateException("Cannot execute when stream is already closed");
     }
 
     @Override
-    public void pause(RowStreamStateWrapper stateWrapper) {
+    public void pause(RowStreamInfo rowStreamInfo) {
         throw new IllegalStateException("Cannot pause when stream is already closed");
     }
 

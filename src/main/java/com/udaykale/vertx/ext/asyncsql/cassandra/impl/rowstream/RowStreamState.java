@@ -5,11 +5,11 @@ package com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream;
  */
 public interface RowStreamState {
 
-    void close(RowStreamStateWrapper stateWrapper);
+    void close(RowStreamInfo rowStreamInfo);
 
-    void execute(RowStreamStateWrapper stateWrapper);
+    void execute(RowStreamInfo rowStreamInfo);
 
-    void pause(RowStreamStateWrapper stateWrapper);
+    void pause(RowStreamInfo rowStreamInfo);
 
     StateType type();
 

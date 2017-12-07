@@ -20,18 +20,18 @@ final class IsExecutingRowStreamState implements RowStreamState {
     }
 
     @Override
-    public void close(RowStreamStateWrapper stateWrapper) {
-        stateWrapper.setState(IsClosedRowStreamState.instance());
+    public void close(RowStreamInfo rowStreamInfo) {
+        rowStreamInfo.setState(IsClosedRowStreamState.instance());
     }
 
     @Override
-    public void execute(RowStreamStateWrapper stateWrapper) {
+    public void execute(RowStreamInfo rowStreamInfo) {
         throw new IllegalStateException("Cannot re-execute when stream is already executing");
     }
 
     @Override
-    public void pause(RowStreamStateWrapper stateWrapper) {
-        stateWrapper.setState(IsPausedRowStreamState.instance(sqlRowStream));
+    public void pause(RowStreamInfo rowStreamInfo) {
+        rowStreamInfo.setState(IsPausedRowStreamState.instance(sqlRowStream));
     }
 
     @Override

@@ -17,7 +17,7 @@ final class RowStreamCloseHelper {
         this.sqlRowStream = Objects.requireNonNull(sqlRowStream);
     }
 
-    public void close(RowStreamStateWrapper stateWrapper) {
+    public void close(RowStreamInfo stateWrapper) {
         // change state to closing
         stateWrapper.setState(IsClosedRowStreamState.instance());
         stateWrapper.getAllRowStreams().remove(sqlRowStream);

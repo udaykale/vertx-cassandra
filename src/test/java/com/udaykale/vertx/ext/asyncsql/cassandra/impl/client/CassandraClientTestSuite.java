@@ -1,9 +1,5 @@
-package com.udaykale.vertx.ext.asyncsql.cassandra;
+package com.udaykale.vertx.ext.asyncsql.cassandra.impl.client;
 
-import com.udaykale.vertx.ext.asyncsql.cassandra.client.ClientConnectionTest;
-import com.udaykale.vertx.ext.asyncsql.cassandra.client.CreationArgumentTest;
-import com.udaykale.vertx.ext.asyncsql.cassandra.client.CreationTest;
-import com.udaykale.vertx.ext.asyncsql.cassandra.client.EqualsAndHashCodeTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 

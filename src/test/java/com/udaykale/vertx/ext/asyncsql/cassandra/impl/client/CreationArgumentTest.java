@@ -1,4 +1,4 @@
-package com.udaykale.vertx.ext.asyncsql.cassandra.client;
+package com.udaykale.vertx.ext.asyncsql.cassandra.impl.client;
 
 import com.datastax.driver.core.Cluster;
 import com.udaykale.vertx.ext.asyncsql.cassandra.CassandraClient;

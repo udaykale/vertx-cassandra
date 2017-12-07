@@ -15,20 +15,20 @@ import java.util.function.Function;
 /**
  * @author uday
  */
-final class RowStreamStateWrapper {
-
-    private RowStreamState state;
+final class RowStreamInfo {
+    // TODO convert to builder
     private ResultSet resultSet;
-    private WorkerExecutor workerExecutor;
-    private Function<Row, JsonArray> rowMapper;
+    private RowStreamState state;
+    private Handler<Void> endHandler;
     private Handler<JsonArray> handler;
+    private WorkerExecutor workerExecutor;
+    private Set<SQLRowStream> allRowStreams;
+    private Function<Row, JsonArray> rowMapper;
     private Handler<Throwable> exceptionHandler;
     private Handler<Void> resultSetClosedHandler;
-    private Handler<Void> endHandler;
     private Handler<AsyncResult<Void>> closeHandler;
-    private Set<SQLRowStream> allRowStreams;
 
-    RowStreamStateWrapper(RowStreamState state) {
+    RowStreamInfo(RowStreamState state) {
         this.state = Objects.requireNonNull(state);
     }
 

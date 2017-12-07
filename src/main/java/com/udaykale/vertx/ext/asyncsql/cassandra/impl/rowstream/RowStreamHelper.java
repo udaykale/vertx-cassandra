@@ -1,58 +1,47 @@
 package com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream;
 
-import com.datastax.driver.core.ColumnDefinitions;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import io.vertx.core.WorkerExecutor;
 import io.vertx.core.json.JsonArray;
 import io.vertx.ext.sql.SQLRowStream;
 
-import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
-
-import static java.util.stream.Collectors.collectingAndThen;
-import static java.util.stream.Collectors.toList;
 
 /**
  * @author uday
  */
 final class RowStreamHelper {
 
-    static List<String> columns(ResultSet resultSet) {
-        return resultSet.getColumnDefinitions()
-                .asList().stream()
-                .map(ColumnDefinitions.Definition::getName)
-                .collect(collectingAndThen(toList(), Collections::unmodifiableList));
-    }
-
-    static RowStreamStateWrapper stateWrapper(WorkerExecutor workerExecutor,
-                                              Set<SQLRowStream> allRowStreams,
-                                              Function<Row, JsonArray> rowMapper,
-                                              CassandraRowStreamImpl cassandraRowStream,
-                                              List<String> columns, ResultSet resultSet) {
+    static RowStreamInfo rowStreamInfo(WorkerExecutor workerExecutor,
+                                       Set<SQLRowStream> allRowStreams,
+                                       Function<Row, JsonArray> rowMapper,
+                                       CassandraRowStreamImpl cassandraRowStream,
+                                       ResultSet resultSet) {
         RowStreamState currentState = IsPausedRowStreamState.instance(cassandraRowStream);
-        RowStreamStateWrapper stateWrapper = new RowStreamStateWrapper(currentState);
+        RowStreamInfo rowStreamInfo = new RowStreamInfo(currentState);
 
-        Function<Row, JsonArray> defaultRowMapper = defaultRowMapper(columns);
-        Function<Row, JsonArray> finalRowMapper = Optional.ofNullable(rowMapper).orElse(defaultRowMapper);
-        stateWrapper.setRowMapper(finalRowMapper);
+        rowStreamInfo.setWorkerExecutor(workerExecutor);
+        rowStreamInfo.setAllRowStreams(allRowStreams);
+        rowStreamInfo.setResultSet(resultSet);
+        rowStreamInfo.setRowMapper(rowStreamMapper(resultSet, rowMapper));
 
-        stateWrapper.setWorkerExecutor(workerExecutor);
-        stateWrapper.setAllRowStreams(allRowStreams);
-        stateWrapper.setResultSet(resultSet);
-
-        return stateWrapper;
+        return rowStreamInfo;
     }
 
-    private static Function<Row, JsonArray> defaultRowMapper(List<String> columns) {
+    static Function<Row, JsonArray> rowStreamMapper(ResultSet resultSet, Function<Row, JsonArray> rowMapper) {
+        int numColumns = resultSet.getColumnDefinitions().size();
+        return Optional.ofNullable(rowMapper).orElse(defaultRowMapper(numColumns));
+    }
+
+    static Function<Row, JsonArray> defaultRowMapper(int numColumns) {
         return row -> {
             JsonArray jsonArray = new JsonArray();
 
-            for (String column : columns) {
-                Object value = row.getObject(column);
+            for (int i = 0; i < numColumns; i++) {
+                Object value = row.getObject(i);
                 if (value instanceof String) {
                     jsonArray.add((String) value);
                 } else if (value instanceof Integer) {

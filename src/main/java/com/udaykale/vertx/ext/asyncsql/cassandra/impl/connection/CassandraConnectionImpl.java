@@ -72,7 +72,7 @@ public final class CassandraConnectionImpl implements CassandraConnection {
 
     @Override
     public SQLConnection execute(String query, Handler<AsyncResult<Void>> handler) {
-        validateQuery(query, handler);
+        validateQuery(context, query, handler);
         CassandraConnectionHelper.queryWithParams(connectionInfo, query, null, null,
                 future -> handleQuery(handler, future, context));
         return this;
@@ -80,7 +80,7 @@ public final class CassandraConnectionImpl implements CassandraConnection {
 
     @Override
     public SQLConnection query(String query, Handler<AsyncResult<ResultSet>> handler) {
-        validateQuery(query, handler);
+        validateQuery(context, query, handler);
         CassandraConnectionHelper.queryWithParams(connectionInfo, query, null, null, handler);
         return this;
     }
@@ -88,7 +88,7 @@ public final class CassandraConnectionImpl implements CassandraConnection {
     @Override
     public SQLConnection queryWithParams(String query, JsonArray params,
                                          Handler<AsyncResult<ResultSet>> handler) {
-        validateQueryParams(query, params, handler);
+        validateQueryParams(context, query, params, handler);
         CassandraConnectionHelper.queryWithParams(connectionInfo, query, params, null, handler);
         return this;
     }
@@ -97,14 +97,14 @@ public final class CassandraConnectionImpl implements CassandraConnection {
     public CassandraConnection queryWithParams(String query, JsonArray params,
                                                Function<Row, JsonArray> rowMapper,
                                                Handler<AsyncResult<ResultSet>> handler) {
-        validateQueryParamsRowMapper(query, params, rowMapper, handler);
+        validateQueryParamsRowMapper(context, query, params, rowMapper, handler);
         CassandraConnectionHelper.queryWithParams(connectionInfo, query, params, rowMapper, handler);
         return this;
     }
 
     @Override
     public SQLConnection queryStream(String query, Handler<AsyncResult<SQLRowStream>> handler) {
-        validateQuery(query, handler);
+        validateQuery(context, query, handler);
         CassandraConnectionHelper.queryStreamWithParams(connectionInfo, singletonList(query),
                 null, null, handler);
         return this;
@@ -113,7 +113,7 @@ public final class CassandraConnectionImpl implements CassandraConnection {
     @Override
     public SQLConnection queryStreamWithParams(String query, JsonArray params,
                                                Handler<AsyncResult<SQLRowStream>> handler) {
-        validateQueryParams(query, params, handler);
+        validateQueryParams(context, query, params, handler);
         CassandraConnectionHelper.queryStreamWithParams(connectionInfo, singletonList(query),
                 emptyListIfNull(params), null, handler);
         return this;
@@ -123,7 +123,7 @@ public final class CassandraConnectionImpl implements CassandraConnection {
     public CassandraConnection queryStreamWithParams(String query, JsonArray params,
                                                      Function<Row, JsonArray> rowMapper,
                                                      Handler<AsyncResult<SQLRowStream>> handler) {
-        validateQueryParamsRowMapper(query, params, rowMapper, handler);
+        validateQueryParamsRowMapper(context, query, params, rowMapper, handler);
         CassandraConnectionHelper.queryStreamWithParams(connectionInfo, singletonList(query),
                 emptyListIfNull(params), rowMapper, handler);
         return this;
@@ -131,7 +131,7 @@ public final class CassandraConnectionImpl implements CassandraConnection {
 
     @Override
     public SQLConnection update(String query, Handler<AsyncResult<UpdateResult>> handler) {
-        validateQuery(query, handler);
+        validateQuery(context, query, handler);
         CassandraConnectionHelper.queryWithParams(connectionInfo, query, null, null,
                 future -> handleUpdate(handler, context, future));
         return this;
@@ -140,7 +140,7 @@ public final class CassandraConnectionImpl implements CassandraConnection {
     @Override
     public SQLConnection updateWithParams(String query, JsonArray params,
                                           Handler<AsyncResult<UpdateResult>> handler) {
-        validateQueryParams(query, params, handler);
+        validateQueryParams(context, query, params, handler);
         CassandraConnectionHelper.queryWithParams(connectionInfo, query, params, null,
                 future -> handleUpdate(handler, context, future));
         return this;
@@ -148,7 +148,7 @@ public final class CassandraConnectionImpl implements CassandraConnection {
 
     @Override
     public SQLConnection batch(List<String> sqlStatements, Handler<AsyncResult<List<Integer>>> handler) {
-        validateBatch(sqlStatements, handler);
+        validateBatch(context, sqlStatements, handler);
         CassandraConnectionHelper.queryWithParams(connectionInfo, sqlStatements, null, null,
                 future -> handleBatch(sqlStatements.size(), handler, context, future));
         return this;
@@ -157,7 +157,7 @@ public final class CassandraConnectionImpl implements CassandraConnection {
     @Override
     public SQLConnection batchWithParams(String query, List<JsonArray> args,
                                          Handler<AsyncResult<List<Integer>>> handler) {
-        validateQuery(query, handler);
+        validateQuery(context, query, handler);
         Objects.requireNonNull(args);
         CassandraConnectionHelper.queryWithParams(connectionInfo, singletonList(query), args, null,
                 future -> handleBatch(args.size(), handler, context, future));
@@ -168,7 +168,7 @@ public final class CassandraConnectionImpl implements CassandraConnection {
     public CassandraConnection batchWithParams(List<String> sqlStatements, List<JsonArray> args,
                                                Handler<AsyncResult<List<Integer>>> handler) {
 
-        validateBatch(sqlStatements, handler);
+        validateBatch(context, sqlStatements, handler);
         Objects.requireNonNull(args);
         assert sqlStatements.size() == args.size();
         CassandraConnectionHelper.queryWithParams(connectionInfo, sqlStatements, args, null,

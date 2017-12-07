@@ -69,8 +69,8 @@ final class ConnectionInfo {
         return preparedStatementCache;
     }
 
-    AtomicInteger getRowStreamId() {
-        return rowStreamId;
+    int generateStreamId() {
+        return rowStreamId.getAndIncrement();
     }
 
     SQLOptions getSqlOptions() {
