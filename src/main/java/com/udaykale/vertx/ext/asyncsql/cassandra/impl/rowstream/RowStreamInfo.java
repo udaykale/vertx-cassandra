@@ -8,107 +8,113 @@ import io.vertx.core.WorkerExecutor;
 import io.vertx.core.json.JsonArray;
 import io.vertx.ext.sql.SQLRowStream;
 
+import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
+import java.util.Optional;
 import java.util.function.Function;
 
 /**
  * @author uday
  */
 final class RowStreamInfo {
-    // TODO convert to builder
-    private ResultSet resultSet;
+    private final ResultSet resultSet;
+    private final WorkerExecutor workerExecutor;
+    private final Function<Row, JsonArray> rowMapper;
+    private final Map<Integer, SQLRowStream> allRowStreams;
+
     private RowStreamState state;
     private Handler<Void> endHandler;
     private Handler<JsonArray> handler;
-    private WorkerExecutor workerExecutor;
-    private Set<SQLRowStream> allRowStreams;
-    private Function<Row, JsonArray> rowMapper;
     private Handler<Throwable> exceptionHandler;
     private Handler<Void> resultSetClosedHandler;
     private Handler<AsyncResult<Void>> closeHandler;
 
-    RowStreamInfo(RowStreamState state) {
-        this.state = Objects.requireNonNull(state);
+    private RowStreamInfo(ResultSet resultSet, WorkerExecutor workerExecutor, Map<Integer, SQLRowStream> allRowStreams,
+                          RowStreamState state, Function<Row, JsonArray> rowMapper) {
+        this.state = state;
+        this.resultSet = resultSet;
+        this.rowMapper = rowMapper;
+        this.allRowStreams = allRowStreams;
+        this.workerExecutor = workerExecutor;
     }
 
-    public RowStreamState getState() {
-        return state;
-    }
-
-    public void setState(RowStreamState state) {
-        this.state = Objects.requireNonNull(state);
-    }
-
-    ResultSet getResultSet() {
-        return resultSet;
-    }
-
-    Set<SQLRowStream> getAllRowStreams() {
-        return allRowStreams;
+    static RowStreamInfo of(WorkerExecutor workerExecutor, Map<Integer, SQLRowStream> allRowStreams, ResultSet resultSet,
+                            RowStreamState state, Function<Row, JsonArray> rowMapper) {
+        Objects.requireNonNull(resultSet);
+        Objects.requireNonNull(rowMapper);
+        Objects.requireNonNull(state);
+        Objects.requireNonNull(allRowStreams);
+        Objects.requireNonNull(workerExecutor);
+        return new RowStreamInfo(resultSet, workerExecutor, allRowStreams, state, rowMapper);
     }
 
     WorkerExecutor getWorkerExecutor() {
         return workerExecutor;
     }
 
+    Map<Integer, SQLRowStream> getAllRowStreams() {
+        return allRowStreams;
+    }
+
+    ResultSet getResultSet() {
+        return resultSet;
+    }
+
+    RowStreamState getState() {
+        return state;
+    }
+
     Function<Row, JsonArray> getRowMapper() {
         return rowMapper;
     }
 
-    Handler<JsonArray> getHandler() {
-        return handler;
+    Optional<Handler<JsonArray>> getHandler() {
+        return Optional.ofNullable(handler);
     }
 
-    Handler<Throwable> getExceptionHandler() {
-        return exceptionHandler;
+    Optional<Handler<Throwable>> getExceptionHandler() {
+        return Optional.ofNullable(exceptionHandler);
     }
 
-    Handler<Void> getResultSetClosedHandler() {
-        return resultSetClosedHandler;
+    Optional<Handler<Void>> getResultSetClosedHandler() {
+        return Optional.ofNullable(resultSetClosedHandler);
     }
 
-    Handler<Void> getEndHandler() {
-        return endHandler;
+    Optional<Handler<Void>> getEndHandler() {
+        return Optional.ofNullable(endHandler);
     }
 
-    Handler<AsyncResult<Void>> getCloseHandler() {
-        return closeHandler;
+    Optional<Handler<AsyncResult<Void>>> getCloseHandler() {
+        return Optional.ofNullable(closeHandler);
     }
 
-    void setResultSet(ResultSet resultSet) {
-        this.resultSet = resultSet;
-    }
-
-    void setWorkerExecutor(WorkerExecutor workerExecutor) {
-        this.workerExecutor = workerExecutor;
-    }
-
-    void setRowMapper(Function<Row, JsonArray> rowMapper) {
-        this.rowMapper = rowMapper;
+    void setState(RowStreamState state) {
+        Objects.requireNonNull(state);
+        this.state = state;
     }
 
     void setHandler(Handler<JsonArray> handler) {
+        Objects.requireNonNull(handler);
         this.handler = handler;
     }
 
     void setExceptionHandler(Handler<Throwable> exceptionHandler) {
+        Objects.requireNonNull(exceptionHandler);
         this.exceptionHandler = exceptionHandler;
     }
 
     void setResultSetClosedHandler(Handler<Void> resultSetClosedHandler) {
+        Objects.requireNonNull(resultSetClosedHandler);
         this.resultSetClosedHandler = resultSetClosedHandler;
     }
 
-    void setAllRowStreams(Set<SQLRowStream> allRowStreams) {
-        this.allRowStreams = allRowStreams;
-    }
-
     void setEndHandler(Handler<Void> endHandler) {
+        Objects.requireNonNull(endHandler);
         this.endHandler = endHandler;
     }
 
     void setCloseHandler(Handler<AsyncResult<Void>> closeHandler) {
+        Objects.requireNonNull(closeHandler);
         this.closeHandler = closeHandler;
     }
 }

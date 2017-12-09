@@ -31,26 +31,14 @@ final class CassandraClientHelper {
             cassandraClient = sharedDataMap.get(baseName);
 
             if (cassandraClient == null) {
-                Session session = createSession(cluster, keySpace);
-                WorkerExecutor workerExecutor = vertx.createSharedWorkerExecutor(clientName);
                 Context context = vertx.getOrCreateContext();
-                cassandraClient = new CassandraClientImpl(context, session, workerExecutor, clientName);
+                WorkerExecutor workerExecutor = vertx.createSharedWorkerExecutor(clientName);
+                Session session = keySpace.isEmpty() ? cluster.connect() : cluster.connect(keySpace);
+                cassandraClient = CassandraClientImpl.of(clientName, context, session, workerExecutor);
                 sharedDataMap.put(baseName, cassandraClient);
             }
         }
 
         return cassandraClient;
-    }
-
-    private static Session createSession(Cluster cluster, String keySpace) {
-        Session session;
-
-        if (keySpace.isEmpty()) {
-            session = cluster.connect();
-        } else {
-            session = cluster.connect(keySpace);
-        }
-
-        return session;
     }
 }

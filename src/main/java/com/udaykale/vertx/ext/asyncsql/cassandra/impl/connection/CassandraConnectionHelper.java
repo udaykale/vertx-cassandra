@@ -1,7 +1,6 @@
 package com.udaykale.vertx.ext.asyncsql.cassandra.impl.connection;
 
 import com.datastax.driver.core.Row;
-import com.udaykale.vertx.ext.asyncsql.cassandra.CassandraConnection;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
@@ -14,6 +13,7 @@ import io.vertx.ext.sql.UpdateResult;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
 import static java.util.Collections.EMPTY_LIST;
@@ -93,8 +93,7 @@ final class CassandraConnectionHelper {
     static void queryWithParams(ConnectionInfo connectionInfo, String query,
                                 JsonArray params, Function<Row, JsonArray> rowMapper,
                                 Handler<AsyncResult<ResultSet>> resultHandler) {
-        queryWithParams(connectionInfo, singletonList(query),
-                params == null ? EMPTY_LIST : singletonList(params), rowMapper, resultHandler);
+        queryWithParams(connectionInfo, singletonList(query), emptyListIfNull(params), rowMapper, resultHandler);
     }
 
     static <T> List<T> emptyListIfNull(T element) {
@@ -106,11 +105,10 @@ final class CassandraConnectionHelper {
                                       Function<Row, JsonArray> rowMapper,
                                       Handler<AsyncResult<SQLRowStream>> handler) {
 
-        CassandraConnection cassandraConnection = connectionInfo.getConnection();
-        CassandraConnectionStreamHelper cassandraConnectionStreamHelper =
-                new CassandraConnectionStreamHelper(cassandraConnection);
+        Integer connectionId = connectionInfo.getConnectionId();
+        CassandraConnectionStreamHelper helper = new CassandraConnectionStreamHelper(connectionId);
 
-        cassandraConnectionStreamHelper.queryStreamWithParams(connectionInfo, queries, params, rowMapper, handler);
+        helper.queryStreamWithParams(connectionInfo, queries, params, rowMapper, handler);
     }
 
     private static void streamEndHandler(List<JsonArray> jsonArrays, Future<ResultSet> result,

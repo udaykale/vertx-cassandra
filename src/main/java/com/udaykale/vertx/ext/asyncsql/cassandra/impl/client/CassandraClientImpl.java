@@ -21,13 +21,21 @@ public final class CassandraClientImpl implements CassandraClient {
     private final String clientName;
     private final ClientInfo clientInfo;
 
-    CassandraClientImpl(Context context, Session session, WorkerExecutor workerExecutor, String clientName) {
+    private CassandraClientImpl(String clientName, ClientInfo clientInfo) {
         this.clientName = Objects.requireNonNull(clientName);
-        clientInfo = ClientInfo.builder(this)
-                .withSession(session)
-                .withContext(context)
-                .withWorkerExecutor(workerExecutor)
-                .build();
+        this.clientInfo = Objects.requireNonNull(clientInfo);
+    }
+
+    static CassandraClientImpl of(String clientName, Context context, Session session,
+                                  WorkerExecutor workerExecutor) {
+        Objects.requireNonNull(context);
+        Objects.requireNonNull(session);
+        Objects.requireNonNull(clientName);
+        Objects.requireNonNull(workerExecutor);
+
+        CassandraClientState clientState = CreatingConnectionClientState.instance();
+        ClientInfo clientInfo = ClientInfo.of(context, session, workerExecutor, clientState);
+        return new CassandraClientImpl(clientName, clientInfo);
     }
 
     public static CassandraClient getOrCreateCassandraClient(Vertx vertx, Cluster cluster,

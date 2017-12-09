@@ -22,25 +22,28 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 final class ClientInfo {
 
-    private Session session;
-    private Context context;
-    private WorkerExecutor workerExecutor;
-    private CassandraClientState clientState;
+    private CassandraClientState state;
     private Handler<AsyncResult<Void>> closeHandler;
 
+    private final Session session;
+    private final Context context;
+    private final WorkerExecutor workerExecutor;
     private final AtomicInteger connectionIdGenerator;
     private final Set<CassandraConnection> allOpenConnections;
     private final Map<String, PreparedStatement> preparedStatementCache;
 
-    private ClientInfo(CassandraClient cassandraClient) {
+    private ClientInfo(Context context, Session session, WorkerExecutor workerExecutor, CassandraClientState state) {
+        this.state = Objects.requireNonNull(state);
+        this.session = Objects.requireNonNull(session);
+        this.context = Objects.requireNonNull(context);
+        this.workerExecutor = Objects.requireNonNull(workerExecutor);
         this.allOpenConnections = new ConcurrentHashSet<>();
         this.preparedStatementCache = new ConcurrentHashMap<>();
         this.connectionIdGenerator = new AtomicInteger(1);
-        this.clientState = CreatingConnectionClientState.instance(cassandraClient);
     }
 
-    static Builder builder(CassandraClient cassandraClient) {
-        return new Builder(cassandraClient);
+    static ClientInfo of(Context context, Session session, WorkerExecutor workerExecutor, CassandraClientState state) {
+        return new ClientInfo(context, session, workerExecutor, state);
     }
 
     Session getSession() {
@@ -72,7 +75,7 @@ final class ClientInfo {
     }
 
     CassandraClientState getState() {
-        return clientState;
+        return state;
     }
 
     void addConnection(CassandraConnection connection) {
@@ -80,52 +83,11 @@ final class ClientInfo {
         allOpenConnections.add(connection);
     }
 
-    void closeAllOpenConnections() {
-        for (CassandraConnection cassandraConnection : allOpenConnections) {
-            cassandraConnection.close();
-        }
-    }
-
     void setCloseHandler(Handler<AsyncResult<Void>> closeHandler) {
         this.closeHandler = Objects.requireNonNull(closeHandler);
     }
 
     public void setState(CassandraClientState clientState) {
-        this.clientState = Objects.requireNonNull(clientState);
-    }
-
-    static final class Builder {
-        private final CassandraClient cassandraClient;
-
-        private Session session;
-        private Context context;
-        private WorkerExecutor workerExecutor;
-
-        private Builder(CassandraClient cassandraClient) {
-            this.cassandraClient = Objects.requireNonNull(cassandraClient);
-        }
-
-        public Builder withSession(Session session) {
-            this.session = Objects.requireNonNull(session);
-            return this;
-        }
-
-        public Builder withContext(Context context) {
-            this.context = Objects.requireNonNull(context);
-            return this;
-        }
-
-        public Builder withWorkerExecutor(WorkerExecutor workerExecutor) {
-            this.workerExecutor = Objects.requireNonNull(workerExecutor);
-            return this;
-        }
-
-        public ClientInfo build() {
-            ClientInfo clientInfo = new ClientInfo(cassandraClient);
-            clientInfo.workerExecutor = Objects.requireNonNull(workerExecutor);
-            clientInfo.session = Objects.requireNonNull(session);
-            clientInfo.context = Objects.requireNonNull(context);
-            return clientInfo;
-        }
+        this.state = Objects.requireNonNull(clientState);
     }
 }

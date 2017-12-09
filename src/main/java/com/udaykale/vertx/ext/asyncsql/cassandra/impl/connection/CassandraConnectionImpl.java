@@ -40,34 +40,28 @@ import static java.util.Collections.singletonList;
 public final class CassandraConnectionImpl implements CassandraConnection {
 
     private final Context context;
-    private final int connectionId;
+    private final Integer connectionId;
     private final ConnectionInfo connectionInfo;
 
-    public CassandraConnectionImpl(int connectionId, Context context, Set<CassandraConnection> allOpenConnections,
-                                   Session session, WorkerExecutor workerExecutor,
-                                   Map<String, PreparedStatement> preparedStatementCache) {
+    private CassandraConnectionImpl(int connectionId, Context context, ConnectionInfo connectionInfo) {
         this.connectionId = connectionId;
         this.context = Objects.requireNonNull(context);
-        this.connectionInfo = ConnectionInfo.builder(this)
+        this.connectionInfo = Objects.requireNonNull(connectionInfo);
+    }
+
+    public static CassandraConnectionImpl of(Integer connectionId, Context context,
+                                             Set<CassandraConnection> allOpenConnections,
+                                             Session session, WorkerExecutor workerExecutor,
+                                             Map<String, PreparedStatement> preparedStatementCache) {
+        ConnectionInfo connectionInfo = ConnectionInfo.builder()
+                .withConnectionId(connectionId)
                 .withContext(context)
                 .withSession(session)
                 .withWorkerExecutor(workerExecutor)
                 .withAllOpenConnections(allOpenConnections)
                 .withPreparedStatementCache(preparedStatementCache)
                 .build();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        CassandraConnectionImpl that = (CassandraConnectionImpl) o;
-        return this.connectionId == that.connectionId;
-    }
-
-    @Override
-    public int hashCode() {
-        return connectionId;
+        return new CassandraConnectionImpl(connectionId, context, connectionInfo);
     }
 
     @Override
@@ -205,22 +199,23 @@ public final class CassandraConnectionImpl implements CassandraConnection {
     @Override
     public void close() {
         // TODO make this async
-        if (connectionInfo.isConnected()) {
-            connectionInfo.closeConnection();
-            connectionInfo.getAllOpenConnections().remove(this);
-            Handler<AsyncResult<Void>> closeHandler = connectionInfo.getCloseHandler();
-            Set<SQLRowStream> allRowStreams = connectionInfo.getAllRowStreams();
+        synchronized (connectionId) {
+            if (connectionInfo.isConnected()) {
+                connectionInfo.closeConnection();
+                connectionInfo.getAllOpenConnections().remove(this);
+                Map<Integer, SQLRowStream> allRowStreams = connectionInfo.getAllRowStreams();
 
-            for (SQLRowStream sqlRowStream : allRowStreams) {
-                sqlRowStream.close();
+                for (SQLRowStream sqlRowStream : allRowStreams.values()) {
+                    sqlRowStream.close();
+                }
+
+                if (connectionInfo.getCloseHandler().isPresent()) {
+                    Handler<AsyncResult<Void>> closeHandler = connectionInfo.getCloseHandler().get();
+                    context.runOnContext(v -> closeHandler.handle(Future.succeededFuture()));
+                }  // do nothing for else part
+            } else {
+                throw new IllegalStateException("Cannot re-close connection when it is already closed");
             }
-
-            if (closeHandler != null) {
-                context.runOnContext(v -> closeHandler.handle(Future.succeededFuture()));
-            }  // do nothing for else part
-
-        } else {
-            throw new IllegalStateException("Cannot re-close connection when it is already closed");
         }
     }
 
@@ -267,5 +262,25 @@ public final class CassandraConnectionImpl implements CassandraConnection {
     @Override
     public SQLConnection getTransactionIsolation(Handler<AsyncResult<TransactionIsolation>> handler) {
         throw new UnsupportedOperationException("Cassandra does not support Transaction Isolation.");
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        CassandraConnectionImpl that = (CassandraConnectionImpl) o;
+        return this.connectionId.equals(that.connectionId);
+    }
+
+    @Override
+    public int hashCode() {
+        return connectionId;
+    }
+
+    @Override
+    public String toString() {
+        return "CassandraConnectionImpl{" +
+                "connectionId=" + connectionId +
+                '}';
     }
 }

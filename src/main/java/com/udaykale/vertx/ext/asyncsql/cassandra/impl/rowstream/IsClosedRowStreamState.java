@@ -1,5 +1,7 @@
 package com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream;
 
+import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream.RowStreamUtil.handleIllegalStateException;
+
 /**
  * @author uday
  */
@@ -14,21 +16,16 @@ final class IsClosedRowStreamState implements RowStreamState {
 
     @Override
     public void close(RowStreamInfo rowStreamInfo) {
-        throw new IllegalStateException("Cannot re-close when stream is already closed");
+        handleIllegalStateException(rowStreamInfo, "Cannot re-close when stream is already closed");
     }
 
     @Override
     public void execute(RowStreamInfo rowStreamInfo) {
-        throw new IllegalStateException("Cannot execute when stream is already closed");
+        handleIllegalStateException(rowStreamInfo, "Cannot execute when stream is already closed");
     }
 
     @Override
     public void pause(RowStreamInfo rowStreamInfo) {
-        throw new IllegalStateException("Cannot pause when stream is already closed");
-    }
-
-    @Override
-    public StateType type() {
-        return StateType.CLOSED;
+        handleIllegalStateException(rowStreamInfo, "Cannot pause when stream is already closed");
     }
 }

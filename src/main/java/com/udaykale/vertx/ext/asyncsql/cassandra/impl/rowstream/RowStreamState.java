@@ -10,10 +10,4 @@ public interface RowStreamState {
     void execute(RowStreamInfo rowStreamInfo);
 
     void pause(RowStreamInfo rowStreamInfo);
-
-    StateType type();
-
-    enum StateType {
-        EXECUTING, PAUSED, CLOSED
-    }
 }

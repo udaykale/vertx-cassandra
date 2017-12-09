@@ -12,13 +12,11 @@ import io.vertx.ext.sql.SQLRowStream;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Function;
 
-import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream.RowStreamHelper.defaultRowMapper;
-import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream.RowStreamHelper.rowStreamInfo;
-import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream.RowStreamHelper.rowStreamMapper;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.toList;
 
@@ -27,18 +25,56 @@ import static java.util.stream.Collectors.toList;
  */
 public final class CassandraRowStreamImpl implements CassandraRowStream {
 
+    private final Integer rowStreamId;
     private final ResultSet resultSet;
-    private final int rowStreamId;
-
     private final RowStreamInfo rowStreamInfo;
 
     private List<String> columnNames;
 
-    public CassandraRowStreamImpl(int rowStreamId, ResultSet resultSet, WorkerExecutor workerExecutor,
-                                  Set<SQLRowStream> allRowStreams, Function<Row, JsonArray> rowMapper) {
+    private CassandraRowStreamImpl(int rowStreamId, ResultSet resultSet, RowStreamInfo rowStreamInfo) {
         this.resultSet = resultSet;
         this.rowStreamId = rowStreamId;
-        this.rowStreamInfo = rowStreamInfo(workerExecutor, allRowStreams, rowMapper, this, resultSet);
+        this.rowStreamInfo = rowStreamInfo;
+    }
+
+    public static CassandraRowStreamImpl of(int rowStreamId, ResultSet resultSet, WorkerExecutor workerExecutor,
+                                            Map<Integer, SQLRowStream> allRowStreams, Function<Row, JsonArray> rowMapper) {
+        Objects.requireNonNull(resultSet);
+        Objects.requireNonNull(allRowStreams);
+        Objects.requireNonNull(workerExecutor);
+
+        int numColumns = resultSet.getColumnDefinitions().size();
+        Function<Row, JsonArray> defaultRowMapper = defaultRowMapper(numColumns);
+        RowStreamState state = IsPausedRowStreamState.instance(rowStreamId);
+        Function<Row, JsonArray> finalRowMapper = Optional.ofNullable(rowMapper).orElse(defaultRowMapper);
+        RowStreamInfo rowStreamInfo = RowStreamInfo.of(workerExecutor, allRowStreams, resultSet, state, finalRowMapper);
+
+        return new CassandraRowStreamImpl(rowStreamId, resultSet, rowStreamInfo);
+    }
+
+    private static Function<Row, JsonArray> defaultRowMapper(int numColumns) {
+        return row -> {
+            JsonArray jsonArray = new JsonArray();
+
+            for (int i = 0; i < numColumns; i++) {
+                Object value = row.getObject(i);
+                if (value instanceof String) {
+                    jsonArray.add((String) value);
+                } else if (value instanceof Integer) {
+                    jsonArray.add((Integer) value);
+                } else if (value instanceof Long) {
+                    jsonArray.add((Long) value);
+                } else if (value instanceof Float) {
+                    jsonArray.add((Float) value);
+                } else if (value instanceof Boolean) {
+                    jsonArray.add((Boolean) value);
+                } else {
+                    jsonArray.add(value);
+                }
+            }
+
+            return jsonArray;
+        };
     }
 
     @Override
@@ -55,26 +91,19 @@ public final class CassandraRowStreamImpl implements CassandraRowStream {
 
     @Override
     public SQLRowStream pause() {
-        synchronized (this) {
+        synchronized (rowStreamId) {
             RowStreamState currentState = rowStreamInfo.getState();
-
-            if (currentState.type() == RowStreamState.StateType.EXECUTING) {
-                currentState.pause(rowStreamInfo);
-            }  // no need to pause since its already paused or closed so no else part
+            currentState.pause(rowStreamInfo);
         }
-
         return this;
     }
 
     @Override
     public SQLRowStream resume() {
-        synchronized (this) {
+        synchronized (rowStreamId) {
             RowStreamState currentState = rowStreamInfo.getState();
-            if (currentState.type() == RowStreamState.StateType.PAUSED) {
-                currentState.execute(rowStreamInfo);
-            }  // no need to resume execution since already executing or closed so no else part
+            currentState.execute(rowStreamInfo);
         }
-
         return this;
     }
 
@@ -92,7 +121,7 @@ public final class CassandraRowStreamImpl implements CassandraRowStream {
     @Override
     public List<String> columns() {
         if (columnNames == null) {
-            synchronized (this) {
+            synchronized (rowStreamId) {
                 columnNames = resultSet.getColumnDefinitions()
                         .asList().stream()
                         .map(ColumnDefinitions.Definition::getName)
@@ -122,7 +151,7 @@ public final class CassandraRowStreamImpl implements CassandraRowStream {
 
     @Override
     public void close() {
-        synchronized (this) {
+        synchronized (rowStreamId) {
             RowStreamState currentState = rowStreamInfo.getState();
             currentState.close(rowStreamInfo);
         }
@@ -146,7 +175,7 @@ public final class CassandraRowStreamImpl implements CassandraRowStream {
 
         CassandraRowStreamImpl that = (CassandraRowStreamImpl) o;
 
-        return rowStreamId == that.rowStreamId;
+        return rowStreamId.equals(that.rowStreamId);
     }
 
     @Override

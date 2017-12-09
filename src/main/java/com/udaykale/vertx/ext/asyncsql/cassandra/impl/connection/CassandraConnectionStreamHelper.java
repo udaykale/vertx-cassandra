@@ -4,7 +4,6 @@ import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.Statement;
-import com.udaykale.vertx.ext.asyncsql.cassandra.CassandraConnection;
 import com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream.CassandraRowStreamImpl;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -17,7 +16,7 @@ import io.vertx.ext.sql.SQLRowStream;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.Objects;
 import java.util.function.Function;
 
 import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.connection.CassandraStatementHelper.generateStatement;
@@ -27,10 +26,10 @@ import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.connection.Cassandr
  */
 final class CassandraConnectionStreamHelper {
 
-    private final CassandraConnection cassandraConnection;
+    private final Integer connectionId;
 
-    CassandraConnectionStreamHelper(CassandraConnection cassandraConnection) {
-        this.cassandraConnection = cassandraConnection;
+    CassandraConnectionStreamHelper(Integer connectionId) {
+        this.connectionId = Objects.requireNonNull(connectionId);
     }
 
     void queryStreamWithParams(ConnectionInfo connectionInfo, List<String> queries, List<JsonArray> params,
@@ -38,14 +37,13 @@ final class CassandraConnectionStreamHelper {
         WorkerExecutor workerExecutor = connectionInfo.getWorkerExecutor();
         Context context = connectionInfo.getContext();
 
-        synchronized (cassandraConnection) {
+        synchronized (connectionId) {
             if (connectionInfo.isConnected()) {
                 // check if connection is closed
                 workerExecutor.executeBlocking((Handler<Future<SQLRowStream>>) future ->
                                 executeQueryAndStream(connectionInfo, queries, params, rowMapper, future),
                         future -> executeQueryAndStreamHandler(handler, future, context));
             }  // connection is closed, do nothing in else part
-
         }
     }
 
@@ -56,7 +54,7 @@ final class CassandraConnectionStreamHelper {
             Session session = connectionInfo.getSession();
             SQLOptions sqlOptions = connectionInfo.getSqlOptions();
             WorkerExecutor workerExecutor = connectionInfo.getWorkerExecutor();
-            Set<SQLRowStream> allRowStreams = connectionInfo.getAllRowStreams();
+            Map<Integer, SQLRowStream> allRowStreams = connectionInfo.getAllRowStreams();
             Map<String, PreparedStatement> preparedStatementCache = connectionInfo.getPreparedStatementCache();
 
             // generate cassandra CQL statement from given params
@@ -64,10 +62,11 @@ final class CassandraConnectionStreamHelper {
             // execute statement
             com.datastax.driver.core.ResultSet resultSet = session.execute(statement);
             // create a row stream from the result set
-            CassandraRowStreamImpl cassandraRowStream = new CassandraRowStreamImpl(connectionInfo.generateStreamId(),
+            int rowStreamId = connectionInfo.generateStreamId();
+            CassandraRowStreamImpl cassandraRowStream = CassandraRowStreamImpl.of(rowStreamId,
                     resultSet, workerExecutor, allRowStreams, rowMapper);
             // add this new stream to list of already created streams
-            allRowStreams.add(cassandraRowStream);
+            allRowStreams.put(rowStreamId, cassandraRowStream);
             future.complete(cassandraRowStream);
         } catch (Throwable t) {
             future.fail(t);

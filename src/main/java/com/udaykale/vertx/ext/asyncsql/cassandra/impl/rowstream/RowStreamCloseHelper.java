@@ -2,7 +2,6 @@ package com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
-import io.vertx.ext.sql.SQLRowStream;
 
 import java.util.Objects;
 
@@ -11,19 +10,19 @@ import java.util.Objects;
  */
 final class RowStreamCloseHelper {
 
-    private final SQLRowStream sqlRowStream;
+    private final Integer rowStreamId;
 
-    RowStreamCloseHelper(SQLRowStream sqlRowStream) {
-        this.sqlRowStream = Objects.requireNonNull(sqlRowStream);
+    RowStreamCloseHelper(Integer rowStreamId) {
+        this.rowStreamId = Objects.requireNonNull(rowStreamId);
     }
 
     public void close(RowStreamInfo stateWrapper) {
         // change state to closing
         stateWrapper.setState(IsClosedRowStreamState.instance());
-        stateWrapper.getAllRowStreams().remove(sqlRowStream);
-        Handler<AsyncResult<Void>> closeHandler = stateWrapper.getCloseHandler();
+        stateWrapper.getAllRowStreams().remove(rowStreamId);
 
-        if (closeHandler != null) {
+        if (stateWrapper.getCloseHandler().isPresent()) {
+            Handler<AsyncResult<Void>> closeHandler = stateWrapper.getCloseHandler().get();
             stateWrapper.getWorkerExecutor().executeBlocking(future -> {
                 try {
                     closeHandler.handle(null);
@@ -34,7 +33,7 @@ final class RowStreamCloseHelper {
             }, futureResult -> {
                 if (futureResult.failed()) {
                     stateWrapper.getWorkerExecutor().executeBlocking(future -> {
-                        stateWrapper.getExceptionHandler().handle(futureResult.cause());
+                        closeHandler.handle(null);
                         future.fail(futureResult.cause());
                     }, futureRes -> {
                         // do nothing since all the cases are handled in the blocking executor
