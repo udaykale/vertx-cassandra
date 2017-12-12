@@ -9,6 +9,7 @@ import io.vertx.core.WorkerExecutor;
 import io.vertx.core.shareddata.SharedData;
 
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * @author uday
@@ -17,8 +18,13 @@ final class CassandraClientHelper {
 
     private final Vertx vertx;
 
-    CassandraClientHelper(Vertx vertx) {
+    private CassandraClientHelper(Vertx vertx) {
         this.vertx = vertx;
+    }
+
+    static CassandraClientHelper instance(Vertx vertx) {
+        Objects.requireNonNull(vertx);
+        return new CassandraClientHelper(vertx);
     }
 
     CassandraClient getOrCreateCassandraClient(Cluster cluster, String keySpace, String clientName) {

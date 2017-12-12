@@ -12,9 +12,9 @@ import io.vertx.ext.sql.SQLRowStream;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 
 import static java.util.stream.Collectors.collectingAndThen;
@@ -30,6 +30,7 @@ public final class CassandraRowStreamImpl implements CassandraRowStream {
     private final RowStreamInfo rowStreamInfo;
 
     private List<String> columnNames;
+    private Handler<AsyncResult<Void>> closeHandler;
 
     private CassandraRowStreamImpl(int rowStreamId, ResultSet resultSet, RowStreamInfo rowStreamInfo) {
         this.resultSet = resultSet;
@@ -38,7 +39,7 @@ public final class CassandraRowStreamImpl implements CassandraRowStream {
     }
 
     public static CassandraRowStreamImpl of(int rowStreamId, ResultSet resultSet, WorkerExecutor workerExecutor,
-                                            Map<Integer, SQLRowStream> allRowStreams, Function<Row, JsonArray> rowMapper) {
+                                            Set<SQLRowStream> allRowStreams, Function<Row, JsonArray> rowMapper) {
         Objects.requireNonNull(resultSet);
         Objects.requireNonNull(allRowStreams);
         Objects.requireNonNull(workerExecutor);
@@ -153,13 +154,13 @@ public final class CassandraRowStreamImpl implements CassandraRowStream {
     public void close() {
         synchronized (rowStreamId) {
             RowStreamState currentState = rowStreamInfo.getState();
-            currentState.close(rowStreamInfo);
+            currentState.close(rowStreamInfo, this, closeHandler);
         }
     }
 
     @Override
     public void close(Handler<AsyncResult<Void>> closeHandler) {
-        rowStreamInfo.setCloseHandler(closeHandler);
+        this.closeHandler = Objects.requireNonNull(closeHandler);
         close();
     }
 
@@ -170,11 +171,13 @@ public final class CassandraRowStreamImpl implements CassandraRowStream {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         CassandraRowStreamImpl that = (CassandraRowStreamImpl) o;
-
         return rowStreamId.equals(that.rowStreamId);
     }
 

@@ -1,5 +1,9 @@
 package com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream;
 
+import com.udaykale.vertx.ext.asyncsql.cassandra.CassandraRowStream;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
+
 import java.util.Objects;
 
 import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream.RowStreamUtil.handleIllegalStateException;
@@ -20,8 +24,8 @@ final class IsExecutingRowStreamState implements RowStreamState {
     }
 
     @Override
-    public void close(RowStreamInfo rowStreamInfo) {
-        // TODO
+    public void close(RowStreamInfo rowStreamInfo, CassandraRowStream cassandraRowStream,
+                      Handler<AsyncResult<Void>> closeHandler) {
         rowStreamInfo.setState(IsClosedRowStreamState.instance());
     }
 

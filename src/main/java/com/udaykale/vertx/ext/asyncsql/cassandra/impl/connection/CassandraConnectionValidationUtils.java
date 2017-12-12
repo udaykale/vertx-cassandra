@@ -16,6 +16,9 @@ import java.util.function.Function;
  */
 final class CassandraConnectionValidationUtils {
 
+    private CassandraConnectionValidationUtils() {
+    }
+
     static <T> void validateQuery(Context context, String query, Handler<AsyncResult<T>> handler) {
         Objects.requireNonNull(handler);
         try {

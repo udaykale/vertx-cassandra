@@ -40,7 +40,7 @@ public final class CassandraClientImpl implements CassandraClient {
 
     public static CassandraClient getOrCreateCassandraClient(Vertx vertx, Cluster cluster,
                                                              String keySpace, String clientName) {
-        CassandraClientHelper cassandraClientHelper = new CassandraClientHelper(vertx);
+        CassandraClientHelper cassandraClientHelper = CassandraClientHelper.instance(vertx);
         return cassandraClientHelper.getOrCreateCassandraClient(cluster, keySpace, clientName);
     }
 

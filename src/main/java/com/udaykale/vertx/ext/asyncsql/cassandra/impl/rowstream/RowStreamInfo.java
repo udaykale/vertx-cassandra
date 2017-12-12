@@ -8,9 +8,9 @@ import io.vertx.core.WorkerExecutor;
 import io.vertx.core.json.JsonArray;
 import io.vertx.ext.sql.SQLRowStream;
 
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 
 /**
@@ -19,17 +19,16 @@ import java.util.function.Function;
 final class RowStreamInfo {
     private final ResultSet resultSet;
     private final WorkerExecutor workerExecutor;
+    private final Set<SQLRowStream> allRowStreams;
     private final Function<Row, JsonArray> rowMapper;
-    private final Map<Integer, SQLRowStream> allRowStreams;
 
     private RowStreamState state;
     private Handler<Void> endHandler;
     private Handler<JsonArray> handler;
     private Handler<Throwable> exceptionHandler;
     private Handler<Void> resultSetClosedHandler;
-    private Handler<AsyncResult<Void>> closeHandler;
 
-    private RowStreamInfo(ResultSet resultSet, WorkerExecutor workerExecutor, Map<Integer, SQLRowStream> allRowStreams,
+    private RowStreamInfo(ResultSet resultSet, WorkerExecutor workerExecutor, Set<SQLRowStream> allRowStreams,
                           RowStreamState state, Function<Row, JsonArray> rowMapper) {
         this.state = state;
         this.resultSet = resultSet;
@@ -38,7 +37,7 @@ final class RowStreamInfo {
         this.workerExecutor = workerExecutor;
     }
 
-    static RowStreamInfo of(WorkerExecutor workerExecutor, Map<Integer, SQLRowStream> allRowStreams, ResultSet resultSet,
+    static RowStreamInfo of(WorkerExecutor workerExecutor, Set<SQLRowStream> allRowStreams, ResultSet resultSet,
                             RowStreamState state, Function<Row, JsonArray> rowMapper) {
         Objects.requireNonNull(resultSet);
         Objects.requireNonNull(rowMapper);
@@ -52,7 +51,7 @@ final class RowStreamInfo {
         return workerExecutor;
     }
 
-    Map<Integer, SQLRowStream> getAllRowStreams() {
+    Set<SQLRowStream> getAllRowStreams() {
         return allRowStreams;
     }
 
@@ -84,10 +83,6 @@ final class RowStreamInfo {
         return Optional.ofNullable(endHandler);
     }
 
-    Optional<Handler<AsyncResult<Void>>> getCloseHandler() {
-        return Optional.ofNullable(closeHandler);
-    }
-
     void setState(RowStreamState state) {
         Objects.requireNonNull(state);
         this.state = state;
@@ -111,10 +106,5 @@ final class RowStreamInfo {
     void setEndHandler(Handler<Void> endHandler) {
         Objects.requireNonNull(endHandler);
         this.endHandler = endHandler;
-    }
-
-    void setCloseHandler(Handler<AsyncResult<Void>> closeHandler) {
-        Objects.requireNonNull(closeHandler);
-        this.closeHandler = closeHandler;
     }
 }

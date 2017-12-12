@@ -13,7 +13,6 @@ import io.vertx.ext.sql.UpdateResult;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
 import static java.util.Collections.EMPTY_LIST;
@@ -23,7 +22,10 @@ import static java.util.Collections.singletonList;
 /**
  * @author uday
  */
-final class CassandraConnectionHelper {
+final class CassandraConnectionUtil {
+
+    private CassandraConnectionUtil() {
+    }
 
     static void handleUpdate(Handler<AsyncResult<UpdateResult>> resultHandler,
                              Context context, AsyncResult<ResultSet> future) {
@@ -75,15 +77,15 @@ final class CassandraConnectionHelper {
         Context context = connectionInfo.getContext();
 
         queryStreamWithParams(connectionInfo, query, params, rowMapper, queryResult -> {
-            if (queryResult.succeeded()) {
+            if (queryResult.failed()) {
+                result.fail(queryResult.cause());
+            } else {
                 SQLRowStream sqlRowStream = queryResult.result();
 
                 sqlRowStream.resultSetClosedHandler(v -> sqlRowStream.moreResults())
                         .handler(jsonArrays::add)
                         .endHandler(e -> streamEndHandler(jsonArrays, result, sqlRowStream))
                         .exceptionHandler(result::fail);
-            } else {
-                result.fail(queryResult.cause());
             }
         });
 
@@ -106,16 +108,15 @@ final class CassandraConnectionHelper {
                                       Handler<AsyncResult<SQLRowStream>> handler) {
 
         Integer connectionId = connectionInfo.getConnectionId();
-        CassandraConnectionStreamHelper helper = new CassandraConnectionStreamHelper(connectionId);
-
+        CassandraConnectionStreamHelper helper = CassandraConnectionStreamHelper.of(connectionId);
         helper.queryStreamWithParams(connectionInfo, queries, params, rowMapper, handler);
     }
 
     private static void streamEndHandler(List<JsonArray> jsonArrays, Future<ResultSet> result,
                                          SQLRowStream sqlRowStream) {
-        ResultSet resultSet = new ResultSet();
-        resultSet.setColumnNames(sqlRowStream.columns());
-        resultSet.setResults(jsonArrays);
+        ResultSet resultSet = new ResultSet()
+                .setColumnNames(sqlRowStream.columns())
+                .setResults(jsonArrays);
         result.complete(resultSet);
         sqlRowStream.close();
     }

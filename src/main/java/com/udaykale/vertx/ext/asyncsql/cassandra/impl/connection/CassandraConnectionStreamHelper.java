@@ -1,25 +1,14 @@
 package com.udaykale.vertx.ext.asyncsql.cassandra.impl.connection;
 
-import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Row;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.Statement;
-import com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream.CassandraRowStreamImpl;
 import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
-import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.WorkerExecutor;
 import io.vertx.core.json.JsonArray;
-import io.vertx.ext.sql.SQLOptions;
 import io.vertx.ext.sql.SQLRowStream;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
-
-import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.connection.CassandraStatementHelper.generateStatement;
 
 /**
  * @author uday
@@ -28,62 +17,19 @@ final class CassandraConnectionStreamHelper {
 
     private final Integer connectionId;
 
-    CassandraConnectionStreamHelper(Integer connectionId) {
+    private CassandraConnectionStreamHelper(Integer connectionId) {
         this.connectionId = Objects.requireNonNull(connectionId);
+    }
+
+    static CassandraConnectionStreamHelper of(Integer connectionId) {
+        Objects.requireNonNull(connectionId);
+        return new CassandraConnectionStreamHelper(connectionId);
     }
 
     void queryStreamWithParams(ConnectionInfo connectionInfo, List<String> queries, List<JsonArray> params,
                                Function<Row, JsonArray> rowMapper, Handler<AsyncResult<SQLRowStream>> handler) {
-        WorkerExecutor workerExecutor = connectionInfo.getWorkerExecutor();
-        Context context = connectionInfo.getContext();
-
         synchronized (connectionId) {
-            if (connectionInfo.isConnected()) {
-                // check if connection is closed
-                workerExecutor.executeBlocking((Handler<Future<SQLRowStream>>) future ->
-                                executeQueryAndStream(connectionInfo, queries, params, rowMapper, future),
-                        future -> executeQueryAndStreamHandler(handler, future, context));
-            }  // connection is closed, do nothing in else part
+            connectionInfo.getState().stream(connectionInfo, queries, params, rowMapper, handler);
         }
-    }
-
-    private static void executeQueryAndStream(ConnectionInfo connectionInfo, List<String> queries,
-                                              List<JsonArray> params, Function<Row, JsonArray> rowMapper,
-                                              Future<SQLRowStream> future) {
-        try {
-            Session session = connectionInfo.getSession();
-            SQLOptions sqlOptions = connectionInfo.getSqlOptions();
-            WorkerExecutor workerExecutor = connectionInfo.getWorkerExecutor();
-            Map<Integer, SQLRowStream> allRowStreams = connectionInfo.getAllRowStreams();
-            Map<String, PreparedStatement> preparedStatementCache = connectionInfo.getPreparedStatementCache();
-
-            // generate cassandra CQL statement from given params
-            Statement statement = generateStatement(queries, params, session, sqlOptions, preparedStatementCache);
-            // execute statement
-            com.datastax.driver.core.ResultSet resultSet = session.execute(statement);
-            // create a row stream from the result set
-            int rowStreamId = connectionInfo.generateStreamId();
-            CassandraRowStreamImpl cassandraRowStream = CassandraRowStreamImpl.of(rowStreamId,
-                    resultSet, workerExecutor, allRowStreams, rowMapper);
-            // add this new stream to list of already created streams
-            allRowStreams.put(rowStreamId, cassandraRowStream);
-            future.complete(cassandraRowStream);
-        } catch (Throwable t) {
-            future.fail(t);
-        }
-    }
-
-    private static void executeQueryAndStreamHandler(Handler<AsyncResult<SQLRowStream>> handler,
-                                                     AsyncResult<SQLRowStream> blockingCallResult,
-                                                     Context context) {
-        Future<SQLRowStream> result = Future.future();
-
-        if (blockingCallResult.failed()) {
-            result.fail(blockingCallResult.cause());
-        } else {
-            result.complete(blockingCallResult.result());
-        }
-
-        context.runOnContext(v -> result.setHandler(handler));
     }
 }

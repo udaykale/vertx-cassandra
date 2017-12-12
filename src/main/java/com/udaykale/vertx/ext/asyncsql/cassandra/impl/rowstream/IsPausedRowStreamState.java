@@ -2,8 +2,10 @@ package com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream;
 
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
+import com.udaykale.vertx.ext.asyncsql.cassandra.CassandraRowStream;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.json.JsonArray;
 
 import java.util.Objects;
@@ -27,9 +29,10 @@ final class IsPausedRowStreamState implements RowStreamState {
     }
 
     @Override
-    public void close(RowStreamInfo rowStreamInfo) {
-        RowStreamCloseHelper rowStreamCloseHelper = new RowStreamCloseHelper(rowStreamId);
-        rowStreamCloseHelper.close(rowStreamInfo);
+    public void close(RowStreamInfo rowStreamInfo, CassandraRowStream cassandraRowStream,
+                      Handler<AsyncResult<Void>> closeHandler) {
+        RowStreamCloseHelper rowStreamCloseHelper = RowStreamCloseHelper.of();
+        rowStreamCloseHelper.close(rowStreamInfo, cassandraRowStream, closeHandler);
     }
 
     @Override

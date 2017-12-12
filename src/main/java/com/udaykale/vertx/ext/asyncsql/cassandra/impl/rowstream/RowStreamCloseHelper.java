@@ -1,29 +1,29 @@
 package com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream;
 
+import com.udaykale.vertx.ext.asyncsql.cassandra.CassandraRowStream;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
-
-import java.util.Objects;
 
 /**
  * @author uday
  */
 final class RowStreamCloseHelper {
 
-    private final Integer rowStreamId;
-
-    RowStreamCloseHelper(Integer rowStreamId) {
-        this.rowStreamId = Objects.requireNonNull(rowStreamId);
+    private RowStreamCloseHelper() {
     }
 
-    public void close(RowStreamInfo stateWrapper) {
-        // change state to closing
-        stateWrapper.setState(IsClosedRowStreamState.instance());
-        stateWrapper.getAllRowStreams().remove(rowStreamId);
+    static RowStreamCloseHelper of() {
+        return new RowStreamCloseHelper();
+    }
 
-        if (stateWrapper.getCloseHandler().isPresent()) {
-            Handler<AsyncResult<Void>> closeHandler = stateWrapper.getCloseHandler().get();
-            stateWrapper.getWorkerExecutor().executeBlocking(future -> {
+    public void close(RowStreamInfo rowStreamInfo, CassandraRowStream rowStream,
+                      Handler<AsyncResult<Void>> closeHandler) {
+        // change state to closing
+        rowStreamInfo.setState(IsClosedRowStreamState.instance());
+        rowStreamInfo.getAllRowStreams().remove(rowStream);
+
+        if (closeHandler != null) {
+            rowStreamInfo.getWorkerExecutor().executeBlocking(future -> {
                 try {
                     closeHandler.handle(null);
                     future.complete();
@@ -32,7 +32,7 @@ final class RowStreamCloseHelper {
                 }
             }, futureResult -> {
                 if (futureResult.failed()) {
-                    stateWrapper.getWorkerExecutor().executeBlocking(future -> {
+                    rowStreamInfo.getWorkerExecutor().executeBlocking(future -> {
                         closeHandler.handle(null);
                         future.fail(futureResult.cause());
                     }, futureRes -> {
@@ -41,6 +41,5 @@ final class RowStreamCloseHelper {
                 }
             });
         }  // do nothing in else part
-
     }
 }

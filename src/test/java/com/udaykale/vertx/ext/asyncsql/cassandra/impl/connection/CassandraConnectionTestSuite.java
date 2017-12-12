@@ -7,7 +7,7 @@ import static org.junit.runners.Suite.SuiteClasses;
 
 @RunWith(Suite.class)
 @SuiteClasses({
-        QueryTest.class
+        ConnectionQueryTest.class
 })
 public class CassandraConnectionTestSuite {
 }
