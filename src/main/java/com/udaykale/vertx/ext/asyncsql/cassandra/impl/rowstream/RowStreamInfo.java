@@ -2,7 +2,7 @@ package com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream;
 
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
-import io.vertx.core.AsyncResult;
+import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.WorkerExecutor;
 import io.vertx.core.json.JsonArray;
@@ -17,6 +17,7 @@ import java.util.function.Function;
  * @author uday
  */
 final class RowStreamInfo {
+    private final Context context;
     private final ResultSet resultSet;
     private final WorkerExecutor workerExecutor;
     private final Set<SQLRowStream> allRowStreams;
@@ -28,23 +29,26 @@ final class RowStreamInfo {
     private Handler<Throwable> exceptionHandler;
     private Handler<Void> resultSetClosedHandler;
 
-    private RowStreamInfo(ResultSet resultSet, WorkerExecutor workerExecutor, Set<SQLRowStream> allRowStreams,
-                          RowStreamState state, Function<Row, JsonArray> rowMapper) {
+    private RowStreamInfo(ResultSet resultSet, WorkerExecutor workerExecutor,
+                          Set<SQLRowStream> allRowStreams, RowStreamState state,
+                          Function<Row, JsonArray> rowMapper, Context context) {
         this.state = state;
+        this.context = context;
         this.resultSet = resultSet;
         this.rowMapper = rowMapper;
         this.allRowStreams = allRowStreams;
         this.workerExecutor = workerExecutor;
     }
 
-    static RowStreamInfo of(WorkerExecutor workerExecutor, Set<SQLRowStream> allRowStreams, ResultSet resultSet,
-                            RowStreamState state, Function<Row, JsonArray> rowMapper) {
+    static RowStreamInfo of(ResultSet resultSet, WorkerExecutor workerExecutor,
+                            Set<SQLRowStream> allRowStreams, RowStreamState state,
+                            Function<Row, JsonArray> rowMapper, Context context) {
+        Objects.requireNonNull(state);
         Objects.requireNonNull(resultSet);
         Objects.requireNonNull(rowMapper);
-        Objects.requireNonNull(state);
         Objects.requireNonNull(allRowStreams);
         Objects.requireNonNull(workerExecutor);
-        return new RowStreamInfo(resultSet, workerExecutor, allRowStreams, state, rowMapper);
+        return new RowStreamInfo(resultSet, workerExecutor, allRowStreams, state, rowMapper, context);
     }
 
     WorkerExecutor getWorkerExecutor() {
@@ -65,6 +69,10 @@ final class RowStreamInfo {
 
     Function<Row, JsonArray> getRowMapper() {
         return rowMapper;
+    }
+
+    Context getContext() {
+        return context;
     }
 
     Optional<Handler<JsonArray>> getHandler() {
@@ -89,22 +97,18 @@ final class RowStreamInfo {
     }
 
     void setHandler(Handler<JsonArray> handler) {
-        Objects.requireNonNull(handler);
         this.handler = handler;
     }
 
     void setExceptionHandler(Handler<Throwable> exceptionHandler) {
-        Objects.requireNonNull(exceptionHandler);
         this.exceptionHandler = exceptionHandler;
     }
 
     void setResultSetClosedHandler(Handler<Void> resultSetClosedHandler) {
-        Objects.requireNonNull(resultSetClosedHandler);
         this.resultSetClosedHandler = resultSetClosedHandler;
     }
 
     void setEndHandler(Handler<Void> endHandler) {
-        Objects.requireNonNull(endHandler);
         this.endHandler = endHandler;
     }
 }

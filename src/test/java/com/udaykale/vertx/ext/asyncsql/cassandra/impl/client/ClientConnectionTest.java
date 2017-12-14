@@ -48,16 +48,23 @@ public class ClientConnectionTest {
     @Test
     public void getConnectionWhenClientClosed(TestContext context) {
         async = context.async();
-        cassandraClient.close();
-        cassandraClient.getConnection(connectionFuture -> {
-            if (connectionFuture.failed()) {
-                Throwable cause = connectionFuture.cause();
-                context.assertEquals(IllegalStateException.class, cause.getClass());
-                context.assertEquals("Cannot create connection when client is already closed", cause.getMessage());
-            } else {
+
+        cassandraClient.close(future -> {
+            if (future.failed()) {
                 context.fail();
+                async.complete();
+            } else {
+                cassandraClient.getConnection(connectionFuture -> {
+                    if (connectionFuture.failed()) {
+                        Throwable cause = connectionFuture.cause();
+                        context.assertEquals(IllegalStateException.class, cause.getClass());
+                        context.assertEquals("Cannot create connection when client is already closed", cause.getMessage());
+                    } else {
+                        context.fail();
+                    }
+                    async.complete();
+                });
             }
-            async.complete();
         });
     }
 
@@ -106,15 +113,12 @@ public class ClientConnectionTest {
             } else {
                 try {
                     cassandraClient.close();
+                    context.fail("Close method should have thrown an exception");
                 } catch (Exception e) {
-                    context.assertEquals(IllegalStateException.class, e.getClass());
-                    context.assertEquals("Cannot re-close client when it is already closed", e.getMessage());
+                    // do nothing
                 }
             }
             async.complete();
         });
     }
-
-    // TODO: close failure
-    //
 }

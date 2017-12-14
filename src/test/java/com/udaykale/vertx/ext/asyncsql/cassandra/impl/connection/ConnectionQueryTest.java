@@ -86,6 +86,56 @@ public class ConnectionQueryTest {
     }
 
     @Test
+    public void executeWithValidSqlTimeOutTest(TestContext context) {
+        Async async = context.async();
+
+        CassandraClient cassandraClient = CassandraClient.createNonShared(vertx, cluster);
+
+        cassandraClient.getConnection(connectionFuture -> {
+            if (connectionFuture.failed()) {
+                context.fail();
+                async.complete();
+            } else {
+                SQLConnection sqlConnection = connectionFuture.result();
+                sqlConnection.execute(QUERY, queryFuture -> {
+                    if (queryFuture.failed()) {
+                        context.fail();
+                        async.complete();
+                    } else {
+                        async.complete();
+                    }
+                }).setOptions(new SQLOptions().setQueryTimeout(100));
+            }
+        });
+    }
+
+    @Test
+    public void executeWithNullSqlOptionsTest(TestContext context) {
+        Async async = context.async();
+
+        CassandraClient cassandraClient = CassandraClient.createNonShared(vertx, cluster);
+
+        cassandraClient.getConnection(connectionFuture -> {
+            if (connectionFuture.failed()) {
+                context.fail();
+                async.complete();
+            } else {
+                SQLConnection sqlConnection = connectionFuture.result();
+                try {
+                    sqlConnection.execute(QUERY, queryFuture -> {
+                        context.fail();
+                        async.complete();
+                    }).setOptions(null);
+                    context.fail();
+                    async.complete();
+                } catch (Throwable e) {
+                    async.complete();
+                }
+            }
+        });
+    }
+
+    @Test
     public void queryTest(TestContext context) {
         Async async = context.async();
 
@@ -199,7 +249,69 @@ public class ConnectionQueryTest {
                     } else {
                         async.complete();
                     }
-                }).setOptions(new SQLOptions().setQueryTimeout(100));
+                });
+            }
+        });
+    }
+
+    @Test
+    public void queryStreamWithParamsTest(TestContext context) {
+        Async async = context.async();
+
+        PreparedStatement preparedStatement = Mockito.mock(PreparedStatement.class);
+        BoundStatement boundStatement = Mockito.mock(BoundStatement.class);
+        Statement statement = Mockito.mock(Statement.class);
+        Mockito.when(session.prepare(Mockito.any(String.class))).thenReturn(preparedStatement);
+        Mockito.when(preparedStatement.bind(Mockito.any(Object[].class))).thenReturn(boundStatement);
+        Mockito.when(boundStatement.setReadTimeoutMillis(Mockito.any(Integer.class))).thenReturn(statement);
+
+        CassandraClient cassandraClient = CassandraClient.createNonShared(vertx, cluster);
+
+        cassandraClient.getConnection(connectionFuture -> {
+            if (connectionFuture.failed()) {
+                context.fail();
+                async.complete();
+            } else {
+                SQLConnection sqlConnection = connectionFuture.result();
+                sqlConnection.queryStreamWithParams(QUERY, new JsonArray(), queryFuture -> {
+                    if (queryFuture.failed()) {
+                        context.fail();
+                        async.complete();
+                    } else {
+                        async.complete();
+                    }
+                });
+            }
+        });
+    }
+
+    @Test
+    public void queryStreamWithParamsAndRowMapperTest(TestContext context) {
+        Async async = context.async();
+
+        PreparedStatement preparedStatement = Mockito.mock(PreparedStatement.class);
+        BoundStatement boundStatement = Mockito.mock(BoundStatement.class);
+        Statement statement = Mockito.mock(Statement.class);
+        Mockito.when(session.prepare(Mockito.any(String.class))).thenReturn(preparedStatement);
+        Mockito.when(preparedStatement.bind(Mockito.any(Object[].class))).thenReturn(boundStatement);
+        Mockito.when(boundStatement.setReadTimeoutMillis(Mockito.any(Integer.class))).thenReturn(statement);
+
+        CassandraClient cassandraClient = CassandraClient.createNonShared(vertx, cluster);
+
+        cassandraClient.getConnection(connectionFuture -> {
+            if (connectionFuture.failed()) {
+                context.fail();
+                async.complete();
+            } else {
+                CassandraConnection sqlConnection = (CassandraConnection) connectionFuture.result();
+                sqlConnection.queryStreamWithParams(QUERY, new JsonArray(), x -> null, queryFuture -> {
+                    if (queryFuture.failed()) {
+                        context.fail();
+                        async.complete();
+                    } else {
+                        async.complete();
+                    }
+                });
             }
         });
     }

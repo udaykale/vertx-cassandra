@@ -21,6 +21,8 @@ public final class CassandraClientImpl implements CassandraClient {
     private final String clientName;
     private final ClientInfo clientInfo;
 
+    private Handler<AsyncResult<Void>> closeHandler;
+
     private CassandraClientImpl(String clientName, ClientInfo clientInfo) {
         this.clientName = Objects.requireNonNull(clientName);
         this.clientInfo = Objects.requireNonNull(clientInfo);
@@ -48,21 +50,22 @@ public final class CassandraClientImpl implements CassandraClient {
     public SQLClient getConnection(Handler<AsyncResult<SQLConnection>> handler) {
         Objects.requireNonNull(handler);
         synchronized (this) {
-            clientInfo.getState().createConnection(clientInfo, handler);
+            Context context = clientInfo.getContext();
+            context.runOnContext(v -> clientInfo.getState().createConnection(clientInfo, handler));
         }
         return this;
     }
 
     @Override
     public void close(Handler<AsyncResult<Void>> closeHandler) {
-        clientInfo.setCloseHandler(closeHandler);
+        this.closeHandler = Objects.requireNonNull(closeHandler);
         close();
     }
 
     @Override
     public void close() {
         synchronized (this) {
-            clientInfo.getState().close(clientInfo);
+            clientInfo.getState().close(clientInfo, closeHandler);
         }
     }
 

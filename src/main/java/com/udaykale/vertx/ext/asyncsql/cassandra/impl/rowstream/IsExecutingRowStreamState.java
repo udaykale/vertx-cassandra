@@ -5,6 +5,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream.RowStreamUtil.handleIllegalStateException;
 
@@ -13,14 +14,14 @@ import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream.RowStream
  */
 final class IsExecutingRowStreamState implements RowStreamState {
 
-    private final Integer rowStreamId;
+    private final AtomicBoolean lock;
 
-    private IsExecutingRowStreamState(Integer rowStreamId) {
-        this.rowStreamId = Objects.requireNonNull(rowStreamId);
+    private IsExecutingRowStreamState(AtomicBoolean lock) {
+        this.lock = Objects.requireNonNull(lock);
     }
 
-    static IsExecutingRowStreamState instance(Integer rowStreamId) {
-        return new IsExecutingRowStreamState(rowStreamId);
+    static IsExecutingRowStreamState instance(AtomicBoolean lock) {
+        return new IsExecutingRowStreamState(lock);
     }
 
     @Override
@@ -36,6 +37,6 @@ final class IsExecutingRowStreamState implements RowStreamState {
 
     @Override
     public void pause(RowStreamInfo rowStreamInfo) {
-        rowStreamInfo.setState(IsPausedRowStreamState.instance(rowStreamId));
+        rowStreamInfo.setState(IsPausedRowStreamState.instance(lock));
     }
 }

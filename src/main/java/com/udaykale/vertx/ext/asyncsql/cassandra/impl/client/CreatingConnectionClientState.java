@@ -12,7 +12,6 @@ import io.vertx.core.WorkerExecutor;
 import io.vertx.ext.sql.SQLConnection;
 
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -28,11 +27,10 @@ final class CreatingConnectionClientState implements CassandraClientState {
     }
 
     @Override
-    public void close(ClientInfo clientInfo) {
-        WorkerExecutor workerExecutor = clientInfo.getWorkerExecutor();
+    public void close(ClientInfo clientInfo, Handler<AsyncResult<Void>> closeHandler) {
         clientInfo.setState(ClosedClientState.instance());
 
-        workerExecutor.executeBlocking((Future<Void> blockingFuture) -> {
+        clientInfo.getWorkerExecutor().executeBlocking((Future<Void> blockingFuture) -> {
             try {
                 for (SQLConnection connection : clientInfo.getAllOpenConnections()) {
                     connection.close();
@@ -50,10 +48,9 @@ final class CreatingConnectionClientState implements CassandraClientState {
                 result.complete();
             }
 
-            Optional<Handler<AsyncResult<Void>>> closeHandler = clientInfo.getCloseHandler();
-            if (closeHandler.isPresent()) {
+            if (closeHandler != null) {
                 Context context = clientInfo.getContext();
-                context.runOnContext(action -> result.setHandler(closeHandler.get()));
+                context.runOnContext(action -> result.setHandler(closeHandler));
             } // nothing to do in else part
         });
     }

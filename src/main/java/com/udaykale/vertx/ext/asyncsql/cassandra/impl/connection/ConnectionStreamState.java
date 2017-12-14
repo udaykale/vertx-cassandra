@@ -25,13 +25,13 @@ import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.connection.Cassandr
 /**
  * @author uday
  */
-class StreamConnectionState implements CassandraConnectionState {
+class ConnectionStreamState implements CassandraConnectionState {
 
-    private StreamConnectionState() {
+    private ConnectionStreamState() {
     }
 
-    static StreamConnectionState instance() {
-        return new StreamConnectionState();
+    static ConnectionStreamState instance() {
+        return new ConnectionStreamState();
     }
 
     @Override
@@ -53,10 +53,9 @@ class StreamConnectionState implements CassandraConnectionState {
     @Override
     public void stream(ConnectionInfo connectionInfo, List<String> queries, List<JsonArray> params,
                        Function<Row, JsonArray> rowMapper, Handler<AsyncResult<SQLRowStream>> handler) {
-        WorkerExecutor workerExecutor = connectionInfo.getWorkerExecutor();
         Context context = connectionInfo.getContext();
 
-        workerExecutor.executeBlocking((Handler<Future<SQLRowStream>>) future ->
+        connectionInfo.getWorkerExecutor().executeBlocking((Handler<Future<SQLRowStream>>) future ->
                         executeQueryAndStream(connectionInfo, queries, params, rowMapper, future),
                 future -> handlerForExecuteQueryAndStream(handler, future, context));
     }
@@ -79,8 +78,9 @@ class StreamConnectionState implements CassandraConnectionState {
             com.datastax.driver.core.ResultSet resultSet = session.execute(statement);
             // create a row stream from the result set
             int rowStreamId = connectionInfo.generateStreamId();
+            Context context = connectionInfo.getContext();
             CassandraRowStreamImpl cassandraRowStream = CassandraRowStreamImpl.of(rowStreamId,
-                    resultSet, workerExecutor, allRowStreams, rowMapper);
+                    resultSet, workerExecutor, allRowStreams, rowMapper, context);
             // add this new stream to list of already created streams
             allRowStreams.add(cassandraRowStream);
             future.complete(cassandraRowStream);

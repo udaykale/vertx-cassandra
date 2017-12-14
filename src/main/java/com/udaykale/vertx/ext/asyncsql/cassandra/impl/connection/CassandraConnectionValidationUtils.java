@@ -19,45 +19,45 @@ final class CassandraConnectionValidationUtils {
     private CassandraConnectionValidationUtils() {
     }
 
-    static <T> void validateQuery(Context context, String query, Handler<AsyncResult<T>> handler) {
+    static <T> void validateQuery(String query, Handler<AsyncResult<T>> handler) {
         Objects.requireNonNull(handler);
         try {
             Objects.requireNonNull(query);
             assert !query.isEmpty();
         } catch (Throwable t) {
-            context.runOnContext(h -> handler.handle(Future.failedFuture(t)));
+            handler.handle(Future.failedFuture(t));
         }
     }
 
-    static <T> void validateQueryParams(Context context, String query, JsonArray params,
+    static <T> void validateQueryParams(String query, JsonArray params,
                                         Handler<AsyncResult<T>> handler) {
-        validateQuery(context, query, handler);
+        validateQuery(query, handler);
         try {
             Objects.requireNonNull(params);
         } catch (Throwable t) {
-            context.runOnContext(h -> handler.handle(Future.failedFuture(t)));
+            handler.handle(Future.failedFuture(t));
         }
     }
 
-    static <T> void validateQueryParamsRowMapper(Context context, String query, JsonArray params,
+    static <T> void validateQueryParamsRowMapper(String query, JsonArray params,
                                                  Function<Row, JsonArray> rowMapper,
                                                  Handler<AsyncResult<T>> handler) {
-        validateQueryParams(context, query, params, handler);
+        validateQueryParams(query, params, handler);
         try {
             Objects.requireNonNull(rowMapper);
         } catch (Throwable t) {
-            context.runOnContext(h -> handler.handle(Future.failedFuture(t)));
+            handler.handle(Future.failedFuture(t));
         }
     }
 
-    static void validateBatch(Context context, List<String> sqlStatements,
+    static void validateBatch(List<String> sqlStatements,
                               Handler<AsyncResult<List<Integer>>> handler) {
         Objects.requireNonNull(handler);
         try {
             Objects.requireNonNull(sqlStatements);
             assert !sqlStatements.isEmpty();
         } catch (Throwable t) {
-            context.runOnContext(h -> handler.handle(Future.failedFuture(t)));
+            handler.handle(Future.failedFuture(t));
         }
     }
 }

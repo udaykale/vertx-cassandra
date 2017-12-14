@@ -2,17 +2,13 @@ package com.udaykale.vertx.ext.asyncsql.cassandra.impl.client;
 
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.Session;
-import com.udaykale.vertx.ext.asyncsql.cassandra.CassandraClient;
 import com.udaykale.vertx.ext.asyncsql.cassandra.CassandraConnection;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
-import io.vertx.core.Handler;
 import io.vertx.core.WorkerExecutor;
 import io.vertx.core.impl.ConcurrentHashSet;
 
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -23,7 +19,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 final class ClientInfo {
 
     private CassandraClientState state;
-    private Handler<AsyncResult<Void>> closeHandler;
 
     private final Session session;
     private final Context context;
@@ -62,10 +57,6 @@ final class ClientInfo {
         return preparedStatementCache;
     }
 
-    Optional<Handler<AsyncResult<Void>>> getCloseHandler() {
-        return Optional.ofNullable(closeHandler);
-    }
-
     int generateConnectionId() {
         return connectionIdGenerator.getAndIncrement();
     }
@@ -81,10 +72,6 @@ final class ClientInfo {
     void addConnection(CassandraConnection connection) {
         Objects.requireNonNull(connection);
         allOpenConnections.add(connection);
-    }
-
-    void setCloseHandler(Handler<AsyncResult<Void>> closeHandler) {
-        this.closeHandler = Objects.requireNonNull(closeHandler);
     }
 
     public void setState(CassandraClientState clientState) {

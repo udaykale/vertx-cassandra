@@ -7,7 +7,6 @@ import com.datastax.driver.core.Session;
 import com.datastax.driver.core.SimpleStatement;
 import com.datastax.driver.core.Statement;
 import io.vertx.core.json.JsonArray;
-import io.vertx.ext.sql.SQLOptions;
 
 import java.util.List;
 import java.util.Map;

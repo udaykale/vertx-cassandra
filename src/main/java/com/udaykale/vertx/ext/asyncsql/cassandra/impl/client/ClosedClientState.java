@@ -19,7 +19,7 @@ final class ClosedClientState implements CassandraClientState {
     }
 
     @Override
-    public void close(ClientInfo clientInfo) {
+    public void close(ClientInfo clientInfo, Handler<AsyncResult<Void>> closeHandler) {
         throw new IllegalStateException("Cannot re-close client when it is already closed");
     }
 

@@ -9,6 +9,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.json.JsonArray;
 
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream.RowStreamUtil.handleIllegalStateException;
 
@@ -17,15 +18,15 @@ import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream.RowStream
  */
 final class IsPausedRowStreamState implements RowStreamState {
 
-    private final Integer rowStreamId;
+    private final AtomicBoolean lock;
 
-    private IsPausedRowStreamState(Integer rowStreamId) {
-        this.rowStreamId = Objects.requireNonNull(rowStreamId);
+    private IsPausedRowStreamState(AtomicBoolean lock) {
+        this.lock = Objects.requireNonNull(lock);
     }
 
-    static IsPausedRowStreamState instance(Integer rowStreamId) {
-        Objects.requireNonNull(rowStreamId);
-        return new IsPausedRowStreamState(rowStreamId);
+    static IsPausedRowStreamState instance(AtomicBoolean lock) {
+        Objects.requireNonNull(lock);
+        return new IsPausedRowStreamState(lock);
     }
 
     @Override
@@ -38,7 +39,7 @@ final class IsPausedRowStreamState implements RowStreamState {
     @Override
     public void execute(RowStreamInfo rowStreamInfo) {
         // change the state to executing
-        rowStreamInfo.setState(IsExecutingRowStreamState.instance(rowStreamId));
+        rowStreamInfo.setState(IsExecutingRowStreamState.instance(lock));
 
         rowStreamInfo.getWorkerExecutor().executeBlocking(future -> readPage(rowStreamInfo, future),
                 readPageResultFuture -> afterReadPage(rowStreamInfo, readPageResultFuture));
@@ -83,11 +84,11 @@ final class IsPausedRowStreamState implements RowStreamState {
                             rowStreamInfo.getEndHandler().get().handle(null);
                         }
                     } else {
-                        synchronized (rowStreamId) {
+                        synchronized (lock) {
                             // pause the stream since we still have data and may continue executing
                             if (rowStreamInfo.getState().getClass() == IsExecutingRowStreamState.class) {
-                                rowStreamInfo.setState(IsPausedRowStreamState.instance(rowStreamId));
-                                rowStreamId.notify(); // leave the lock on wrapper
+                                rowStreamInfo.setState(IsPausedRowStreamState.instance(lock));
+                                lock.notify(); // leave the lock on wrapper
                                 // call result set closed handler when a page is read
                                 if (rowStreamInfo.getResultSetClosedHandler().isPresent()) {
                                     rowStreamInfo.getResultSetClosedHandler().get().handle(null);

@@ -9,7 +9,7 @@ import io.vertx.ext.sql.SQLConnection;
  */
 interface CassandraClientState {
 
-    void close(ClientInfo clientInfo);
+    void close(ClientInfo clientInfo, Handler<AsyncResult<Void>> closeHandler);
 
     void createConnection(ClientInfo clientInfo, Handler<AsyncResult<SQLConnection>> handler);
 }

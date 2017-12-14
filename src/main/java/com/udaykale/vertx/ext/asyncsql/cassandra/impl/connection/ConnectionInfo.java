@@ -12,6 +12,7 @@ import io.vertx.ext.sql.SQLRowStream;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -31,7 +32,7 @@ final class ConnectionInfo {
 
     private Context context;
     private Session session;
-    private Integer connectionId;
+    private AtomicBoolean lock;
     private WorkerExecutor workerExecutor;
     private CassandraConnectionState state;
     private Set<CassandraConnection> allOpenConnections;
@@ -78,8 +79,8 @@ final class ConnectionInfo {
         return allOpenConnections;
     }
 
-    Integer getConnectionId() {
-        return connectionId;
+    AtomicBoolean getLock() {
+        return lock;
     }
 
     CassandraConnectionState getState() {
@@ -96,7 +97,7 @@ final class ConnectionInfo {
 
         private Context context;
         private Session session;
-        private Integer connectionId;
+        private AtomicBoolean lock;
         private WorkerExecutor workerExecutor;
         private CassandraConnectionState currentState;
         private Set<CassandraConnection> allOpenConnections;
@@ -105,8 +106,8 @@ final class ConnectionInfo {
         private Builder() {
         }
 
-        public Builder withConnectionId(int connectionId) {
-            this.connectionId = connectionId;
+        public Builder withLock(AtomicBoolean lock) {
+            this.lock = lock;
             return this;
         }
 
@@ -142,10 +143,10 @@ final class ConnectionInfo {
 
         public ConnectionInfo build() {
             ConnectionInfo connectionInfo = new ConnectionInfo();
-            connectionInfo.setContext(context)
+            connectionInfo.setLock(lock)
+                    .setContext(context)
                     .setSession(session)
                     .setState(currentState)
-                    .setConnectionId(connectionId)
                     .setWorkerExecutor(workerExecutor)
                     .setAllOpenConnections(allOpenConnections)
                     .setPreparedStatementCache(preparedStatementCache);
@@ -158,9 +159,9 @@ final class ConnectionInfo {
         this.sqlOptions = sqlOptions;
     }
 
-    private ConnectionInfo setConnectionId(Integer connectionId) {
-        Objects.requireNonNull(connectionId);
-        this.connectionId = connectionId;
+    private ConnectionInfo setLock(AtomicBoolean lock) {
+        Objects.requireNonNull(lock);
+        this.lock = lock;
         return this;
     }
 
@@ -182,15 +183,14 @@ final class ConnectionInfo {
         return this;
     }
 
-    private ConnectionInfo setPreparedStatementCache(Map<String, PreparedStatement> preparedStatementCache) {
-        Objects.requireNonNull(preparedStatementCache);
-        this.preparedStatementCache = preparedStatementCache;
-        return this;
-    }
-
     private ConnectionInfo setAllOpenConnections(Set<CassandraConnection> allOpenConnections) {
         Objects.requireNonNull(allOpenConnections);
         this.allOpenConnections = allOpenConnections;
         return this;
+    }
+
+    private void setPreparedStatementCache(Map<String, PreparedStatement> preparedStatementCache) {
+        Objects.requireNonNull(preparedStatementCache);
+        this.preparedStatementCache = preparedStatementCache;
     }
 }

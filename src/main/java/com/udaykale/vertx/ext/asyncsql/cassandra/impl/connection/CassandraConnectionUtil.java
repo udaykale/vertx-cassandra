@@ -13,6 +13,7 @@ import io.vertx.ext.sql.UpdateResult;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
 import static java.util.Collections.EMPTY_LIST;
@@ -56,7 +57,7 @@ final class CassandraConnectionUtil {
     }
 
     static void handleQuery(Handler<AsyncResult<Void>> resultHandler,
-                            AsyncResult<ResultSet> future, Context context) {
+                            Context context, AsyncResult<ResultSet> future) {
         Future<Void> result = Future.future();
 
         if (future.succeeded()) {
@@ -87,9 +88,8 @@ final class CassandraConnectionUtil {
                         .endHandler(e -> streamEndHandler(jsonArrays, result, sqlRowStream))
                         .exceptionHandler(result::fail);
             }
+            context.runOnContext(v -> result.setHandler(resultHandler));
         });
-
-        context.runOnContext(v -> result.setHandler(resultHandler));
     }
 
     static void queryWithParams(ConnectionInfo connectionInfo, String query,
@@ -98,7 +98,7 @@ final class CassandraConnectionUtil {
         queryWithParams(connectionInfo, singletonList(query), emptyListIfNull(params), rowMapper, resultHandler);
     }
 
-    static <T> List<T> emptyListIfNull(T element) {
+    private static <T> List<T> emptyListIfNull(T element) {
         return element == null ? EMPTY_LIST : singletonList(element);
     }
 
@@ -106,9 +106,8 @@ final class CassandraConnectionUtil {
                                       List<String> queries, List<JsonArray> params,
                                       Function<Row, JsonArray> rowMapper,
                                       Handler<AsyncResult<SQLRowStream>> handler) {
-
-        Integer connectionId = connectionInfo.getConnectionId();
-        CassandraConnectionStreamHelper helper = CassandraConnectionStreamHelper.of(connectionId);
+        AtomicBoolean lock = connectionInfo.getLock();
+        CassandraConnectionStreamHelper helper = CassandraConnectionStreamHelper.of(lock);
         helper.queryStreamWithParams(connectionInfo, queries, params, rowMapper, handler);
     }
 
