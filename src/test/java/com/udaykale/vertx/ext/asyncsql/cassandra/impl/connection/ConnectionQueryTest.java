@@ -315,4 +315,66 @@ public class ConnectionQueryTest {
             }
         });
     }
+
+    @Test
+    public void updateTest(TestContext context) {
+        Async async = context.async();
+
+        PreparedStatement preparedStatement = Mockito.mock(PreparedStatement.class);
+        BoundStatement boundStatement = Mockito.mock(BoundStatement.class);
+        Statement statement = Mockito.mock(Statement.class);
+        Mockito.when(session.prepare(Mockito.any(String.class))).thenReturn(preparedStatement);
+        Mockito.when(preparedStatement.bind(Mockito.any(Object[].class))).thenReturn(boundStatement);
+        Mockito.when(boundStatement.setReadTimeoutMillis(Mockito.any(Integer.class))).thenReturn(statement);
+
+        CassandraClient cassandraClient = CassandraClient.createNonShared(vertx, cluster);
+
+        cassandraClient.getConnection(connectionFuture -> {
+            if (connectionFuture.failed()) {
+                context.fail();
+                async.complete();
+            } else {
+                SQLConnection sqlConnection = connectionFuture.result();
+                sqlConnection.update(QUERY, queryFuture -> {
+                    if (queryFuture.failed()) {
+                        context.fail();
+                        async.complete();
+                    } else {
+                        async.complete();
+                    }
+                });
+            }
+        });
+    }
+
+    @Test
+    public void updateWithParamsTest(TestContext context) {
+        Async async = context.async();
+
+        PreparedStatement preparedStatement = Mockito.mock(PreparedStatement.class);
+        BoundStatement boundStatement = Mockito.mock(BoundStatement.class);
+        Statement statement = Mockito.mock(Statement.class);
+        Mockito.when(session.prepare(Mockito.any(String.class))).thenReturn(preparedStatement);
+        Mockito.when(preparedStatement.bind(Mockito.any(Object[].class))).thenReturn(boundStatement);
+        Mockito.when(boundStatement.setReadTimeoutMillis(Mockito.any(Integer.class))).thenReturn(statement);
+
+        CassandraClient cassandraClient = CassandraClient.createNonShared(vertx, cluster);
+
+        cassandraClient.getConnection(connectionFuture -> {
+            if (connectionFuture.failed()) {
+                context.fail();
+                async.complete();
+            } else {
+                SQLConnection sqlConnection = connectionFuture.result();
+                sqlConnection.updateWithParams(QUERY, new JsonArray(), queryFuture -> {
+                    if (queryFuture.failed()) {
+                        context.fail();
+                        async.complete();
+                    } else {
+                        async.complete();
+                    }
+                });
+            }
+        });
+    }
 }

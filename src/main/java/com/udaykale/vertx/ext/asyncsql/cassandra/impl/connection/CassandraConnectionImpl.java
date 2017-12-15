@@ -186,21 +186,21 @@ public final class CassandraConnectionImpl implements CassandraConnection {
     @Override
     public SQLConnection call(String sql, Handler<AsyncResult<ResultSet>> resultHandler) {
         // TODO
-        return this;
+        throw new UnsupportedOperationException("This method is not yet supported.");
     }
 
     @Override
     public SQLConnection callWithParams(String sql, JsonArray params, JsonArray outputs,
                                         Handler<AsyncResult<ResultSet>> resultHandler) {
         // TODO
-        return this;
+        throw new UnsupportedOperationException("This method is not yet supported.");
     }
 
     @Override
     public SQLConnection batchCallableWithParams(String sqlStatement, List<JsonArray> inArgs, List<JsonArray> outArgs,
                                                  Handler<AsyncResult<List<Integer>>> handler) {
         // TODO
-        return this;
+        throw new UnsupportedOperationException("This method is not yet supported.");
     }
 
     @Override
