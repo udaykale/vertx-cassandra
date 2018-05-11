@@ -30,7 +30,7 @@ import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.connection.Cassandr
 import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.connection.CassandraConnectionValidationUtils.validateQuery;
 import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.connection.CassandraConnectionValidationUtils.validateQueryParams;
 import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.connection.CassandraConnectionValidationUtils.validateQueryParamsRowMapper;
-import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.connection.ConnectionInfo.DEFAULT_QUERY_TIME_OUT;
+import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.connection.ConnectionInfoWrapper.DEFAULT_QUERY_TIME_OUT;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 
@@ -42,16 +42,16 @@ public final class CassandraConnectionImpl implements CassandraConnection {
     private final Context context;
     private final int connectionId;
     private final AtomicBoolean lock;
-    private final ConnectionInfo connectionInfo;
+    private final ConnectionInfoWrapper connectionInfoWrapper;
 
     private Handler<AsyncResult<Void>> closeHandler;
 
-    private CassandraConnectionImpl(int connectionId, ConnectionInfo connectionInfo,
+    private CassandraConnectionImpl(int connectionId, ConnectionInfoWrapper connectionInfoWrapper,
                                     Context context, AtomicBoolean lock) {
         this.connectionId = connectionId;
         this.lock = Objects.requireNonNull(lock);
         this.context = Objects.requireNonNull(context);
-        this.connectionInfo = Objects.requireNonNull(connectionInfo);
+        this.connectionInfoWrapper = Objects.requireNonNull(connectionInfoWrapper);
     }
 
     public static CassandraConnectionImpl of(Integer connectionId, Context context,
@@ -60,7 +60,7 @@ public final class CassandraConnectionImpl implements CassandraConnection {
                                              Map<String, PreparedStatement> preparedStatementCache) {
         CassandraConnectionState currentState = ConnectionStreamState.instance();
         AtomicBoolean lock = new AtomicBoolean();
-        ConnectionInfo connectionInfo = ConnectionInfo.builder()
+        ConnectionInfoWrapper connectionInfoWrapper = ConnectionInfoWrapper.builder()
                 .withLock(lock)
                 .withContext(context)
                 .withSession(session)
@@ -69,13 +69,13 @@ public final class CassandraConnectionImpl implements CassandraConnection {
                 .withAllOpenConnections(allOpenConnections)
                 .withPreparedStatementCache(preparedStatementCache)
                 .build();
-        return new CassandraConnectionImpl(connectionId, connectionInfo, context, lock);
+        return new CassandraConnectionImpl(connectionId, connectionInfoWrapper, context, lock);
     }
 
     @Override
     public SQLConnection execute(String query, Handler<AsyncResult<Void>> handler) {
         validateQuery(query, handler);
-        CassandraConnectionUtil.queryWithParams(connectionInfo, query, null, null,
+        CassandraConnectionUtil.queryWithParams(connectionInfoWrapper, query, null, null,
                 future -> handleQuery(handler, context, future));
         return this;
     }
@@ -83,7 +83,7 @@ public final class CassandraConnectionImpl implements CassandraConnection {
     @Override
     public SQLConnection query(String query, Handler<AsyncResult<ResultSet>> handler) {
         validateQuery(query, handler);
-        CassandraConnectionUtil.queryWithParams(connectionInfo, query, null, null, handler);
+        CassandraConnectionUtil.queryWithParams(connectionInfoWrapper, query, null, null, handler);
         return this;
     }
 
@@ -91,7 +91,7 @@ public final class CassandraConnectionImpl implements CassandraConnection {
     public SQLConnection queryWithParams(String query, JsonArray params,
                                          Handler<AsyncResult<ResultSet>> handler) {
         validateQueryParams(query, params, handler);
-        CassandraConnectionUtil.queryWithParams(connectionInfo, query, params, null, handler);
+        CassandraConnectionUtil.queryWithParams(connectionInfoWrapper, query, params, null, handler);
         return this;
     }
 
@@ -100,14 +100,14 @@ public final class CassandraConnectionImpl implements CassandraConnection {
                                                Function<Row, JsonArray> rowMapper,
                                                Handler<AsyncResult<ResultSet>> handler) {
         validateQueryParamsRowMapper(query, params, rowMapper, handler);
-        CassandraConnectionUtil.queryWithParams(connectionInfo, query, params, rowMapper, handler);
+        CassandraConnectionUtil.queryWithParams(connectionInfoWrapper, query, params, rowMapper, handler);
         return this;
     }
 
     @Override
     public SQLConnection queryStream(String query, Handler<AsyncResult<SQLRowStream>> handler) {
         validateQuery(query, handler);
-        CassandraConnectionUtil.queryStreamWithParams(connectionInfo, singletonList(query),
+        CassandraConnectionUtil.queryStreamWithParams(connectionInfoWrapper, singletonList(query),
                 emptyList(), null, handler);
         return this;
     }
@@ -116,7 +116,7 @@ public final class CassandraConnectionImpl implements CassandraConnection {
     public SQLConnection queryStreamWithParams(String query, JsonArray params,
                                                Handler<AsyncResult<SQLRowStream>> handler) {
         validateQueryParams(query, params, handler);
-        CassandraConnectionUtil.queryStreamWithParams(connectionInfo, singletonList(query),
+        CassandraConnectionUtil.queryStreamWithParams(connectionInfoWrapper, singletonList(query),
                 singletonList(params), null, handler);
         return this;
     }
@@ -126,7 +126,7 @@ public final class CassandraConnectionImpl implements CassandraConnection {
                                                      Function<Row, JsonArray> rowMapper,
                                                      Handler<AsyncResult<SQLRowStream>> handler) {
         validateQueryParamsRowMapper(query, params, rowMapper, handler);
-        CassandraConnectionUtil.queryStreamWithParams(connectionInfo, singletonList(query),
+        CassandraConnectionUtil.queryStreamWithParams(connectionInfoWrapper, singletonList(query),
                 singletonList(params), rowMapper, handler);
         return this;
     }
@@ -134,7 +134,7 @@ public final class CassandraConnectionImpl implements CassandraConnection {
     @Override
     public SQLConnection update(String query, Handler<AsyncResult<UpdateResult>> handler) {
         validateQuery(query, handler);
-        CassandraConnectionUtil.queryWithParams(connectionInfo, query, null, null,
+        CassandraConnectionUtil.queryWithParams(connectionInfoWrapper, query, null, null,
                 future -> handleUpdate(handler, context, future));
         return this;
     }
@@ -143,7 +143,7 @@ public final class CassandraConnectionImpl implements CassandraConnection {
     public SQLConnection updateWithParams(String query, JsonArray params,
                                           Handler<AsyncResult<UpdateResult>> handler) {
         validateQueryParams(query, params, handler);
-        CassandraConnectionUtil.queryWithParams(connectionInfo, query, params, null,
+        CassandraConnectionUtil.queryWithParams(connectionInfoWrapper, query, params, null,
                 future -> handleUpdate(handler, context, future));
         return this;
     }
@@ -151,7 +151,7 @@ public final class CassandraConnectionImpl implements CassandraConnection {
     @Override
     public SQLConnection batch(List<String> sqlStatements, Handler<AsyncResult<List<Integer>>> handler) {
         validateBatch(sqlStatements, handler);
-        CassandraConnectionUtil.queryWithParams(connectionInfo, sqlStatements, null, null,
+        CassandraConnectionUtil.queryWithParams(connectionInfoWrapper, sqlStatements, null, null,
                 future -> handleBatch(sqlStatements.size(), handler, context, future));
         return this;
     }
@@ -159,9 +159,10 @@ public final class CassandraConnectionImpl implements CassandraConnection {
     @Override
     public SQLConnection batchWithParams(String query, List<JsonArray> args,
                                          Handler<AsyncResult<List<Integer>>> handler) {
+        // TODO
         validateQuery(query, handler);
         Objects.requireNonNull(args);
-        CassandraConnectionUtil.queryWithParams(connectionInfo, singletonList(query), args, null,
+        CassandraConnectionUtil.queryWithParams(connectionInfoWrapper, singletonList(query), args, null,
                 future -> handleBatch(args.size(), handler, context, future));
         return this;
     }
@@ -173,7 +174,7 @@ public final class CassandraConnectionImpl implements CassandraConnection {
         validateBatch(sqlStatements, handler);
         Objects.requireNonNull(args);
         assert sqlStatements.size() == args.size();
-        CassandraConnectionUtil.queryWithParams(connectionInfo, sqlStatements, args, null,
+        CassandraConnectionUtil.queryWithParams(connectionInfoWrapper, sqlStatements, args, null,
                 future -> handleBatch(args.size(), handler, context, future));
         return this;
     }
@@ -206,7 +207,7 @@ public final class CassandraConnectionImpl implements CassandraConnection {
     @Override
     public void close() {
         synchronized (lock) {
-            connectionInfo.getState().close(connectionInfo, this, closeHandler);
+            connectionInfoWrapper.close(this, closeHandler);
         }
     }
 
@@ -222,7 +223,7 @@ public final class CassandraConnectionImpl implements CassandraConnection {
 
         if (options == null) {
             synchronized (lock) {
-                connectionInfo.setState(ConnectionParameterErrorState.instance());
+                connectionInfoWrapper.setState(ConnectionParameterErrorState.instance());
             }
             throw new NullPointerException("SQL options cannot be null");
         } else {
@@ -233,7 +234,7 @@ public final class CassandraConnectionImpl implements CassandraConnection {
             sqlOptions.setQueryTimeout(DEFAULT_QUERY_TIME_OUT);
         }
 
-        connectionInfo.setSqlOptions(sqlOptions);
+        connectionInfoWrapper.setSqlOptions(sqlOptions);
 
         return this;
     }

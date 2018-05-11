@@ -25,18 +25,18 @@ final class IsExecutingRowStreamState implements RowStreamState {
     }
 
     @Override
-    public void close(RowStreamInfo rowStreamInfo, CassandraRowStream cassandraRowStream,
+    public void close(RowStreamInfoWrapper rowStreamInfoWrapper, CassandraRowStream cassandraRowStream,
                       Handler<AsyncResult<Void>> closeHandler) {
-        rowStreamInfo.setState(IsClosedRowStreamState.instance());
+        rowStreamInfoWrapper.setState(IsClosedRowStreamState.instance());
     }
 
     @Override
-    public void execute(RowStreamInfo rowStreamInfo) {
-        handleIllegalStateException(rowStreamInfo, "Cannot re-execute when stream is already executing");
+    public void execute(RowStreamInfoWrapper rowStreamInfoWrapper) {
+        handleIllegalStateException(rowStreamInfoWrapper, "Cannot re-execute when stream is already executing");
     }
 
     @Override
-    public void pause(RowStreamInfo rowStreamInfo) {
-        rowStreamInfo.setState(IsPausedRowStreamState.instance(lock));
+    public void pause(RowStreamInfoWrapper rowStreamInfoWrapper) {
+        rowStreamInfoWrapper.setState(IsPausedRowStreamState.instance(lock));
     }
 }

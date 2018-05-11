@@ -69,15 +69,15 @@ final class CassandraConnectionUtil {
         context.runOnContext(v -> result.setHandler(resultHandler));
     }
 
-    static void queryWithParams(ConnectionInfo connectionInfo, List<String> query,
+    static void queryWithParams(ConnectionInfoWrapper connectionInfoWrapper, List<String> query,
                                 List<JsonArray> params, Function<Row, JsonArray> rowMapper,
                                 Handler<AsyncResult<ResultSet>> resultHandler) {
         Objects.requireNonNull(query);
         List<JsonArray> jsonArrays = new LinkedList<>();
         Future<ResultSet> result = Future.future();
-        Context context = connectionInfo.getContext();
+        Context context = connectionInfoWrapper.getContext();
 
-        queryStreamWithParams(connectionInfo, query, params, rowMapper, queryResult -> {
+        queryStreamWithParams(connectionInfoWrapper, query, params, rowMapper, queryResult -> {
             if (queryResult.failed()) {
                 result.fail(queryResult.cause());
             } else {
@@ -92,23 +92,23 @@ final class CassandraConnectionUtil {
         });
     }
 
-    static void queryWithParams(ConnectionInfo connectionInfo, String query,
+    static void queryWithParams(ConnectionInfoWrapper connectionInfoWrapper, String query,
                                 JsonArray params, Function<Row, JsonArray> rowMapper,
                                 Handler<AsyncResult<ResultSet>> resultHandler) {
-        queryWithParams(connectionInfo, singletonList(query), emptyListIfNull(params), rowMapper, resultHandler);
+        queryWithParams(connectionInfoWrapper, singletonList(query), emptyListIfNull(params), rowMapper, resultHandler);
     }
 
     private static <T> List<T> emptyListIfNull(T element) {
         return element == null ? EMPTY_LIST : singletonList(element);
     }
 
-    static void queryStreamWithParams(ConnectionInfo connectionInfo,
+    static void queryStreamWithParams(ConnectionInfoWrapper connectionInfoWrapper,
                                       List<String> queries, List<JsonArray> params,
                                       Function<Row, JsonArray> rowMapper,
                                       Handler<AsyncResult<SQLRowStream>> handler) {
-        AtomicBoolean lock = connectionInfo.getLock();
+        AtomicBoolean lock = connectionInfoWrapper.getLock();
         CassandraConnectionStreamHelper helper = CassandraConnectionStreamHelper.of(lock);
-        helper.queryStreamWithParams(connectionInfo, queries, params, rowMapper, handler);
+        helper.queryStreamWithParams(connectionInfoWrapper, queries, params, rowMapper, handler);
     }
 
     private static void streamEndHandler(List<JsonArray> jsonArrays, Future<ResultSet> result,

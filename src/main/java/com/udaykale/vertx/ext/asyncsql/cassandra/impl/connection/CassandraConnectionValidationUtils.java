@@ -2,7 +2,6 @@ package com.udaykale.vertx.ext.asyncsql.cassandra.impl.connection;
 
 import com.datastax.driver.core.Row;
 import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonArray;

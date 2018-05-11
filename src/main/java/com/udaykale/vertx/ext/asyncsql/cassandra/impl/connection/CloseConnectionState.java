@@ -24,13 +24,13 @@ class CloseConnectionState implements CassandraConnectionState {
     }
 
     @Override
-    public void close(ConnectionInfo connectionInfo, CassandraConnection connection,
+    public void close(ConnectionInfoWrapper connectionInfoWrapper, CassandraConnection connection,
                       Handler<AsyncResult<Void>> closeHandler) {
         throw new IllegalStateException("Cannot re-close connection when it is already closed");
     }
 
     @Override
-    public void stream(ConnectionInfo connectionInfo, List<String> queries, List<JsonArray> params,
+    public void stream(ConnectionInfoWrapper connectionInfoWrapper, List<String> queries, List<JsonArray> params,
                        Function<Row, JsonArray> rowMapper, Handler<AsyncResult<SQLRowStream>> handler) {
         RuntimeException e = new IllegalStateException("Cannot stream from connection when it is closed");
 

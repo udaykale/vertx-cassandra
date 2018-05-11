@@ -30,17 +30,17 @@ public final class CassandraRowStreamImpl implements CassandraRowStream {
     private final int rowStreamId;
     private final AtomicBoolean lock;
     private final ResultSet resultSet;
-    private final RowStreamInfo rowStreamInfo;
+    private final RowStreamInfoWrapper rowStreamInfoWrapper;
 
     private List<String> columnNames;
     private Handler<AsyncResult<Void>> closeHandler;
 
     private CassandraRowStreamImpl(int rowStreamId, ResultSet resultSet,
-                                   RowStreamInfo rowStreamInfo, AtomicBoolean lock) {
+                                   RowStreamInfoWrapper rowStreamInfoWrapper, AtomicBoolean lock) {
         this.lock = lock;
         this.resultSet = resultSet;
         this.rowStreamId = rowStreamId;
-        this.rowStreamInfo = rowStreamInfo;
+        this.rowStreamInfoWrapper = rowStreamInfoWrapper;
     }
 
     public static CassandraRowStreamImpl of(int rowStreamId, ResultSet resultSet, WorkerExecutor workerExecutor,
@@ -56,10 +56,10 @@ public final class CassandraRowStreamImpl implements CassandraRowStream {
         Function<Row, JsonArray> defaultRowMapper = defaultRowMapper(numColumns);
         RowStreamState state = IsPausedRowStreamState.instance(lock);
         Function<Row, JsonArray> finalRowMapper = Optional.ofNullable(rowMapper).orElse(defaultRowMapper);
-        RowStreamInfo rowStreamInfo = RowStreamInfo.of(resultSet, workerExecutor, allRowStreams,
+        RowStreamInfoWrapper rowStreamInfoWrapper = RowStreamInfoWrapper.of(resultSet, workerExecutor, allRowStreams,
                 state, finalRowMapper, context);
 
-        return new CassandraRowStreamImpl(rowStreamId, resultSet, rowStreamInfo, lock);
+        return new CassandraRowStreamImpl(rowStreamId, resultSet, rowStreamInfoWrapper, lock);
     }
 
     private static Function<Row, JsonArray> defaultRowMapper(int numColumns) {
@@ -91,11 +91,11 @@ public final class CassandraRowStreamImpl implements CassandraRowStream {
     public SQLRowStream exceptionHandler(Handler<Throwable> exceptionHandler) {
         if (exceptionHandler == null) {
             synchronized (lock) {
-                rowStreamInfo.setState(RowStreamParameterErrorState.instance());
+                rowStreamInfoWrapper.setState(RowStreamParameterErrorState.instance());
             }
             throw new NullPointerException("Exception handler cannot be null");
         } else {
-            rowStreamInfo.setExceptionHandler(exceptionHandler);
+            rowStreamInfoWrapper.setExceptionHandler(exceptionHandler);
         }
         return this;
     }
@@ -104,11 +104,11 @@ public final class CassandraRowStreamImpl implements CassandraRowStream {
     public SQLRowStream handler(Handler<JsonArray> handler) {
         if (handler == null) {
             synchronized (lock) {
-                rowStreamInfo.setState(RowStreamParameterErrorState.instance());
+                rowStreamInfoWrapper.setState(RowStreamParameterErrorState.instance());
             }
             throw new NullPointerException("Stream handler cannot be null");
         } else {
-            rowStreamInfo.setHandler(handler);
+            rowStreamInfoWrapper.setHandler(handler);
         }
         return resume();
     }
@@ -116,7 +116,7 @@ public final class CassandraRowStreamImpl implements CassandraRowStream {
     @Override
     public SQLRowStream pause() {
         synchronized (lock) {
-            rowStreamInfo.getState().pause(rowStreamInfo);
+            rowStreamInfoWrapper.pause();
         }
         return this;
     }
@@ -124,8 +124,8 @@ public final class CassandraRowStreamImpl implements CassandraRowStream {
     @Override
     public SQLRowStream resume() {
         synchronized (lock) {
-            Context context = rowStreamInfo.getContext();
-            context.runOnContext(v -> rowStreamInfo.getState().execute(rowStreamInfo));
+            Context context = rowStreamInfoWrapper.getContext();
+            context.runOnContext(v -> rowStreamInfoWrapper.execute());
         }
         return this;
     }
@@ -134,11 +134,11 @@ public final class CassandraRowStreamImpl implements CassandraRowStream {
     public SQLRowStream endHandler(Handler<Void> endHandler) {
         if (endHandler == null) {
             synchronized (lock) {
-                rowStreamInfo.setState(RowStreamParameterErrorState.instance());
+                rowStreamInfoWrapper.setState(RowStreamParameterErrorState.instance());
             }
             throw new NullPointerException("End handler cannot be null");
         } else {
-            rowStreamInfo.setEndHandler(endHandler);
+            rowStreamInfoWrapper.setEndHandler(endHandler);
         }
         return this;
     }
@@ -166,11 +166,11 @@ public final class CassandraRowStreamImpl implements CassandraRowStream {
     public SQLRowStream resultSetClosedHandler(Handler<Void> resultSetClosedHandler) {
         if (resultSetClosedHandler == null) {
             synchronized (lock) {
-                rowStreamInfo.setState(RowStreamParameterErrorState.instance());
+                rowStreamInfoWrapper.setState(RowStreamParameterErrorState.instance());
             }
             throw new NullPointerException("Result Set closed handler cannot be null");
         } else {
-            rowStreamInfo.setResultSetClosedHandler(resultSetClosedHandler);
+            rowStreamInfoWrapper.setResultSetClosedHandler(resultSetClosedHandler);
         }
         return this;
     }
@@ -189,7 +189,7 @@ public final class CassandraRowStreamImpl implements CassandraRowStream {
     @Override
     public void close() {
         synchronized (lock) {
-            rowStreamInfo.getState().close(rowStreamInfo, this, closeHandler);
+            rowStreamInfoWrapper.close(this, closeHandler);
         }
     }
 

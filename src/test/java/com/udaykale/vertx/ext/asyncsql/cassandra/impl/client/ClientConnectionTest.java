@@ -7,6 +7,7 @@ import io.vertx.core.Vertx;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -20,7 +21,6 @@ import org.mockito.Mockito;
 @RunWith(VertxUnitRunner.class)
 public class ClientConnectionTest {
     private CassandraClient cassandraClient;
-    private Async async;
 
     @Rule
     public ExpectedException illegalState = ExpectedException.none();
@@ -36,7 +36,7 @@ public class ClientConnectionTest {
 
     @Test
     public void getConnection(TestContext context) {
-        async = context.async();
+        Async async = context.async();
         cassandraClient.getConnection(connectionFuture -> {
             if (connectionFuture.failed()) {
                 context.fail();
@@ -47,7 +47,7 @@ public class ClientConnectionTest {
 
     @Test
     public void getConnectionWhenClientClosed(TestContext context) {
-        async = context.async();
+        Async async = context.async();
 
         cassandraClient.close(future -> {
             if (future.failed()) {
@@ -70,7 +70,7 @@ public class ClientConnectionTest {
 
     @Test
     public void closeClient(TestContext context) {
-        async = context.async();
+        Async async = context.async();
         try {
             cassandraClient.close();
         } catch (Exception e) {
@@ -81,7 +81,7 @@ public class ClientConnectionTest {
 
     @Test
     public void closeClientWithHandler(TestContext context) {
-        async = context.async();
+        Async async = context.async();
         try {
             cassandraClient.close(closeHandler -> {
             });
@@ -93,7 +93,7 @@ public class ClientConnectionTest {
 
     @Test
     public void getConnectionThenCloseClient(TestContext context) {
-        async = context.async();
+        Async async = context.async();
         cassandraClient.getConnection(future -> {
             if (future.failed()) {
                 context.fail();
@@ -105,20 +105,39 @@ public class ClientConnectionTest {
     }
 
     @Test
-    public void closeWhenClientAlreadyClosed(TestContext context) {
-        async = context.async();
-        cassandraClient.close(future -> {
-            if (future.failed()) {
-                context.fail();
-            } else {
-                try {
-                    cassandraClient.close();
-                    context.fail("Close method should have thrown an exception");
-                } catch (Exception e) {
-                    // do nothing
+    public void closeWhenClientAlreadyClosedAndSecondCloseHandlerIsNull(TestContext context) throws InterruptedException {
+        Async async = context.async();
+        cassandraClient.close();
+        Thread.sleep(2000);
+
+        try {
+            cassandraClient.close();
+            context.fail("Close method should have thrown an exception");
+        } catch (Exception e) {
+            Assert.assertEquals("Cannot re-close client when it is already closed", e.getMessage());
+        }
+
+        async.complete();
+    }
+
+    @Test
+    public void closeWhenClientAlreadyClosed(TestContext context) throws InterruptedException {
+        Async async = context.async();
+        cassandraClient.close();
+        Thread.sleep(2000);
+
+        try {
+            cassandraClient.close(resultFuture -> {
+                if (resultFuture.failed()) {
+                    String message = resultFuture.cause().getMessage();
+                    Assert.assertEquals("Cannot re-close client when it is already closed", message);
+                } else {
+                    context.fail();
                 }
-            }
-            async.complete();
-        });
+                async.complete();
+            });
+        } catch (Exception e) {
+            Assert.assertEquals("Cannot re-close client when it is already closed", e.getMessage());
+        }
     }
 }

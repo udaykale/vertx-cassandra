@@ -15,8 +15,8 @@ import java.util.function.Function;
  */
 interface CassandraConnectionState {
 
-    void close(ConnectionInfo connectionInfo, CassandraConnection connection, Handler<AsyncResult<Void>> closeHandler);
+    void close(ConnectionInfoWrapper connectionInfoWrapper, CassandraConnection connection, Handler<AsyncResult<Void>> closeHandler);
 
-    void stream(ConnectionInfo connectionInfo, List<String> queries, List<JsonArray> params,
+    void stream(ConnectionInfoWrapper connectionInfoWrapper, List<String> queries, List<JsonArray> params,
                 Function<Row, JsonArray> rowMapper, Handler<AsyncResult<SQLRowStream>> handler);
 }

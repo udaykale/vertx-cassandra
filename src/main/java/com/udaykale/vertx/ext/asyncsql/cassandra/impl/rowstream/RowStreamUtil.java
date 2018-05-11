@@ -7,11 +7,11 @@ import io.vertx.core.Handler;
  */
 final class RowStreamUtil {
 
-    static void handleIllegalStateException(RowStreamInfo rowStreamInfo, String message) {
+    static void handleIllegalStateException(RowStreamInfoWrapper rowStreamInfoWrapper, String message) {
         IllegalStateException e = new IllegalStateException(message);
 
-        if (rowStreamInfo.getExceptionHandler().isPresent()) {
-            Handler<Throwable> exceptionHandler = rowStreamInfo.getExceptionHandler().get();
+        if (rowStreamInfoWrapper.getExceptionHandler().isPresent()) {
+            Handler<Throwable> exceptionHandler = rowStreamInfoWrapper.getExceptionHandler().get();
             exceptionHandler.handle(e);
         } else {
             throw e;

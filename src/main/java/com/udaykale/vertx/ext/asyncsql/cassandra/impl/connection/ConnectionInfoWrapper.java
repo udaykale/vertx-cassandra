@@ -1,24 +1,30 @@
 package com.udaykale.vertx.ext.asyncsql.cassandra.impl.connection;
 
 import com.datastax.driver.core.PreparedStatement;
+import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.udaykale.vertx.ext.asyncsql.cassandra.CassandraConnection;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
+import io.vertx.core.Handler;
 import io.vertx.core.WorkerExecutor;
 import io.vertx.core.impl.ConcurrentHashSet;
+import io.vertx.core.json.JsonArray;
 import io.vertx.ext.sql.SQLOptions;
 import io.vertx.ext.sql.SQLRowStream;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 /**
  * @author uday
  */
-final class ConnectionInfo {
+final class ConnectionInfoWrapper {
 
     static final int DEFAULT_QUERY_TIME_OUT = 10000;
 
@@ -38,13 +44,13 @@ final class ConnectionInfo {
     private Set<CassandraConnection> allOpenConnections;
     private Map<String, PreparedStatement> preparedStatementCache;
 
-    private ConnectionInfo() {
+    private ConnectionInfoWrapper() {
         this.allRowStreams = new ConcurrentHashSet<>();
         this.rowStreamId = new AtomicInteger(1);
     }
 
-    static ConnectionInfo.Builder builder() {
-        return new ConnectionInfo.Builder();
+    static ConnectionInfoWrapper.Builder builder() {
+        return new ConnectionInfoWrapper.Builder();
     }
 
     Context getContext() {
@@ -83,11 +89,16 @@ final class ConnectionInfo {
         return lock;
     }
 
-    CassandraConnectionState getState() {
-        return state;
+    void close(CassandraConnection connection, Handler<AsyncResult<Void>> closeHandler) {
+        state.close(this, connection, closeHandler);
     }
 
-    ConnectionInfo setState(CassandraConnectionState state) {
+    void stream(List<String> queries, List<JsonArray> params, Function<Row, JsonArray> rowMapper,
+                Handler<AsyncResult<SQLRowStream>> handler) {
+        state.stream(this, queries, params, rowMapper, handler);
+    }
+
+    ConnectionInfoWrapper setState(CassandraConnectionState state) {
         Objects.requireNonNull(state);
         this.state = state;
         return this;
@@ -141,16 +152,16 @@ final class ConnectionInfo {
             return this;
         }
 
-        public ConnectionInfo build() {
-            ConnectionInfo connectionInfo = new ConnectionInfo();
-            connectionInfo.setLock(lock)
+        public ConnectionInfoWrapper build() {
+            ConnectionInfoWrapper connectionInfoWrapper = new ConnectionInfoWrapper();
+            connectionInfoWrapper.setLock(lock)
                     .setContext(context)
                     .setSession(session)
                     .setState(currentState)
                     .setWorkerExecutor(workerExecutor)
                     .setAllOpenConnections(allOpenConnections)
                     .setPreparedStatementCache(preparedStatementCache);
-            return connectionInfo;
+            return connectionInfoWrapper;
         }
     }
 
@@ -159,31 +170,31 @@ final class ConnectionInfo {
         this.sqlOptions = sqlOptions;
     }
 
-    private ConnectionInfo setLock(AtomicBoolean lock) {
+    private ConnectionInfoWrapper setLock(AtomicBoolean lock) {
         Objects.requireNonNull(lock);
         this.lock = lock;
         return this;
     }
 
-    private ConnectionInfo setContext(Context context) {
+    private ConnectionInfoWrapper setContext(Context context) {
         Objects.requireNonNull(context);
         this.context = context;
         return this;
     }
 
-    private ConnectionInfo setSession(Session session) {
+    private ConnectionInfoWrapper setSession(Session session) {
         Objects.requireNonNull(session);
         this.session = session;
         return this;
     }
 
-    private ConnectionInfo setWorkerExecutor(WorkerExecutor workerExecutor) {
+    private ConnectionInfoWrapper setWorkerExecutor(WorkerExecutor workerExecutor) {
         Objects.requireNonNull(workerExecutor);
         this.workerExecutor = workerExecutor;
         return this;
     }
 
-    private ConnectionInfo setAllOpenConnections(Set<CassandraConnection> allOpenConnections) {
+    private ConnectionInfoWrapper setAllOpenConnections(Set<CassandraConnection> allOpenConnections) {
         Objects.requireNonNull(allOpenConnections);
         this.allOpenConnections = allOpenConnections;
         return this;

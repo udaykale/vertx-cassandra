@@ -2,6 +2,8 @@ package com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream;
 
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
+import com.udaykale.vertx.ext.asyncsql.cassandra.CassandraRowStream;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.WorkerExecutor;
@@ -16,7 +18,7 @@ import java.util.function.Function;
 /**
  * @author uday
  */
-final class RowStreamInfo {
+final class RowStreamInfoWrapper {
     private final Context context;
     private final ResultSet resultSet;
     private final WorkerExecutor workerExecutor;
@@ -29,9 +31,9 @@ final class RowStreamInfo {
     private Handler<Throwable> exceptionHandler;
     private Handler<Void> resultSetClosedHandler;
 
-    private RowStreamInfo(ResultSet resultSet, WorkerExecutor workerExecutor,
-                          Set<SQLRowStream> allRowStreams, RowStreamState state,
-                          Function<Row, JsonArray> rowMapper, Context context) {
+    private RowStreamInfoWrapper(ResultSet resultSet, WorkerExecutor workerExecutor,
+                                 Set<SQLRowStream> allRowStreams, RowStreamState state,
+                                 Function<Row, JsonArray> rowMapper, Context context) {
         this.state = state;
         this.context = context;
         this.resultSet = resultSet;
@@ -40,15 +42,15 @@ final class RowStreamInfo {
         this.workerExecutor = workerExecutor;
     }
 
-    static RowStreamInfo of(ResultSet resultSet, WorkerExecutor workerExecutor,
-                            Set<SQLRowStream> allRowStreams, RowStreamState state,
-                            Function<Row, JsonArray> rowMapper, Context context) {
+    static RowStreamInfoWrapper of(ResultSet resultSet, WorkerExecutor workerExecutor,
+                                   Set<SQLRowStream> allRowStreams, RowStreamState state,
+                                   Function<Row, JsonArray> rowMapper, Context context) {
         Objects.requireNonNull(state);
         Objects.requireNonNull(resultSet);
         Objects.requireNonNull(rowMapper);
         Objects.requireNonNull(allRowStreams);
         Objects.requireNonNull(workerExecutor);
-        return new RowStreamInfo(resultSet, workerExecutor, allRowStreams, state, rowMapper, context);
+        return new RowStreamInfoWrapper(resultSet, workerExecutor, allRowStreams, state, rowMapper, context);
     }
 
     WorkerExecutor getWorkerExecutor() {
@@ -63,8 +65,16 @@ final class RowStreamInfo {
         return resultSet;
     }
 
-    RowStreamState getState() {
-        return state;
+    void close(CassandraRowStream cassandraRowStream, Handler<AsyncResult<Void>> closeHandler) {
+        state.close(this, cassandraRowStream, closeHandler);
+    }
+
+    void execute() {
+        state.execute(this);
+    }
+
+    void pause() {
+        state.pause(this);
     }
 
     Function<Row, JsonArray> getRowMapper() {
@@ -110,5 +120,9 @@ final class RowStreamInfo {
 
     void setEndHandler(Handler<Void> endHandler) {
         this.endHandler = endHandler;
+    }
+
+    Class<? extends RowStreamState> stateClass() {
+        return state.getClass();
     }
 }

@@ -33,13 +33,13 @@ public class EqualsAndHashCodeTest {
     public void equalsForSameClientObjectsTest() {
         CassandraClient cassandraClient1 = CassandraClient.createShared(vertx, "test1", cluster);
         CassandraClient cassandraClient2 = CassandraClient.createShared(vertx, "test1", cluster);
-        Assert.assertTrue(cassandraClient1.equals(cassandraClient2));
+        Assert.assertEquals(cassandraClient1, cassandraClient2);
     }
 
     @Test
     public void equalsForObjectsOfDifferentTypesTest() {
         CassandraClient cassandraClient = CassandraClient.createShared(vertx, "test1", cluster);
-        Assert.assertFalse(cassandraClient.equals(""));
+        Assert.assertNotEquals("", cassandraClient);
     }
 
     @Test

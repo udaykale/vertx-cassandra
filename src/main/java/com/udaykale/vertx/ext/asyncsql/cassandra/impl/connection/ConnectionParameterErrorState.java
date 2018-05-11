@@ -23,13 +23,13 @@ class ConnectionParameterErrorState implements CassandraConnectionState {
     }
 
     @Override
-    public void close(ConnectionInfo connectionInfo, CassandraConnection connection,
+    public void close(ConnectionInfoWrapper connectionInfoWrapper, CassandraConnection connection,
                       Handler<AsyncResult<Void>> closeHandler) {
         // do nothing since an error was already thrown because parameters were set wrong
     }
 
     @Override
-    public void stream(ConnectionInfo connectionInfo, List<String> queries, List<JsonArray> params,
+    public void stream(ConnectionInfoWrapper connectionInfoWrapper, List<String> queries, List<JsonArray> params,
                        Function<Row, JsonArray> rowMapper, Handler<AsyncResult<SQLRowStream>> handler) {
         // do nothing since an error was already thrown because parameters were set wrong
     }

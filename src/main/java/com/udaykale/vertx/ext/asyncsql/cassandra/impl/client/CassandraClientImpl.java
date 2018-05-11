@@ -1,16 +1,15 @@
 package com.udaykale.vertx.ext.asyncsql.cassandra.impl.client;
 
 import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.Session;
 import com.udaykale.vertx.ext.asyncsql.cassandra.CassandraClient;
 import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.WorkerExecutor;
+import io.vertx.core.shareddata.SharedData;
 import io.vertx.ext.sql.SQLClient;
 import io.vertx.ext.sql.SQLConnection;
 
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -19,39 +18,64 @@ import java.util.Objects;
 public final class CassandraClientImpl implements CassandraClient {
 
     private final String clientName;
-    private final ClientInfo clientInfo;
+    private final ClientStateWrapper clientStateWrapper;
 
     private Handler<AsyncResult<Void>> closeHandler;
 
-    private CassandraClientImpl(String clientName, ClientInfo clientInfo) {
+    private CassandraClientImpl(String clientName, ClientStateWrapper clientStateWrapper) {
         this.clientName = Objects.requireNonNull(clientName);
-        this.clientInfo = Objects.requireNonNull(clientInfo);
+        this.clientStateWrapper = Objects.requireNonNull(clientStateWrapper);
     }
 
-    static CassandraClientImpl of(String clientName, Context context, Session session,
-                                  WorkerExecutor workerExecutor) {
-        Objects.requireNonNull(context);
-        Objects.requireNonNull(session);
-        Objects.requireNonNull(clientName);
-        Objects.requireNonNull(workerExecutor);
-
-        CassandraClientState clientState = CreatingConnectionClientState.instance();
-        ClientInfo clientInfo = ClientInfo.of(context, session, workerExecutor, clientState);
-        return new CassandraClientImpl(clientName, clientInfo);
+    public static CassandraClient getOrCreateCassandraClient(Vertx vertx, Cluster cluster, String keySpace,
+                                                             String clientName) {
+        return CassandraClientHelper.getOrCreateCassandraClient(vertx, cluster, keySpace, clientName);
     }
 
-    public static CassandraClient getOrCreateCassandraClient(Vertx vertx, Cluster cluster,
-                                                             String keySpace, String clientName) {
-        CassandraClientHelper cassandraClientHelper = CassandraClientHelper.instance(vertx);
-        return cassandraClientHelper.getOrCreateCassandraClient(cluster, keySpace, clientName);
+    // For synchronized over vertx
+    final static class CassandraClientHelper {
+
+        private final Vertx vertx;
+
+        private CassandraClientHelper(Vertx vertx) {
+            this.vertx = vertx;
+        }
+
+        static CassandraClient getOrCreateCassandraClient(Vertx vertx, Cluster cluster, String keySpace,
+                                                          String clientName) {
+            Objects.requireNonNull(vertx);
+            CassandraClientHelper cassandraClientHelper = new CassandraClientHelper(vertx);
+            return cassandraClientHelper.getOrCreateCassandraClient(cluster, keySpace, clientName);
+        }
+
+        private CassandraClient getOrCreateCassandraClient(Cluster cluster, String keySpace, String clientName) {
+            CassandraClient cassandraClient;
+
+            synchronized (vertx) {
+                SharedData sharedData = vertx.sharedData();
+                String baseName = clientName + CassandraClient.class;
+                Map<String, CassandraClient> sharedDataMap = sharedData.getLocalMap(baseName);
+                cassandraClient = sharedDataMap.get(baseName);
+
+                if (cassandraClient == null) {
+                    CassandraClientState clientState =
+                            CreatingConnectionClientState.instance(vertx, cluster, keySpace, clientName);
+                    ClientStateWrapper clientStateWrapper = ClientStateWrapper.of(clientState);
+
+                    cassandraClient = new CassandraClientImpl(clientName, clientStateWrapper);
+                    sharedDataMap.put(baseName, cassandraClient);
+                }
+            }
+
+            return cassandraClient;
+        }
     }
 
     @Override
     public SQLClient getConnection(Handler<AsyncResult<SQLConnection>> handler) {
         Objects.requireNonNull(handler);
         synchronized (this) {
-            Context context = clientInfo.getContext();
-            context.runOnContext(v -> clientInfo.getState().createConnection(clientInfo, handler));
+            clientStateWrapper.createConnection(handler);
         }
         return this;
     }
@@ -65,7 +89,7 @@ public final class CassandraClientImpl implements CassandraClient {
     @Override
     public void close() {
         synchronized (this) {
-            clientInfo.getState().close(clientInfo, closeHandler);
+            clientStateWrapper.close(closeHandler);
         }
     }
 

@@ -2,7 +2,6 @@ package com.udaykale.vertx.ext.asyncsql.cassandra.impl.connection;
 
 import com.datastax.driver.core.Row;
 import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonArray;
 import io.vertx.ext.sql.SQLRowStream;
@@ -28,12 +27,10 @@ final class CassandraConnectionStreamHelper {
         return new CassandraConnectionStreamHelper(lock);
     }
 
-    void queryStreamWithParams(ConnectionInfo connectionInfo, List<String> queries, List<JsonArray> params,
+    void queryStreamWithParams(ConnectionInfoWrapper connectionInfoWrapper, List<String> queries, List<JsonArray> params,
                                Function<Row, JsonArray> rowMapper, Handler<AsyncResult<SQLRowStream>> handler) {
         synchronized (lock) {
-            Context context = connectionInfo.getContext();
-            context.runOnContext(v -> connectionInfo.getState()
-                    .stream(connectionInfo, queries, params, rowMapper, handler));
+            connectionInfoWrapper.stream(queries, params, rowMapper, handler);
         }
     }
 }

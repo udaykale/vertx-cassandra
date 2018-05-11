@@ -30,35 +30,35 @@ final class IsPausedRowStreamState implements RowStreamState {
     }
 
     @Override
-    public void close(RowStreamInfo rowStreamInfo, CassandraRowStream cassandraRowStream,
+    public void close(RowStreamInfoWrapper rowStreamInfoWrapper, CassandraRowStream cassandraRowStream,
                       Handler<AsyncResult<Void>> closeHandler) {
         RowStreamCloseHelper rowStreamCloseHelper = RowStreamCloseHelper.of();
-        rowStreamCloseHelper.close(rowStreamInfo, cassandraRowStream, closeHandler);
+        rowStreamCloseHelper.close(rowStreamInfoWrapper, cassandraRowStream, closeHandler);
     }
 
     @Override
-    public void execute(RowStreamInfo rowStreamInfo) {
+    public void execute(RowStreamInfoWrapper rowStreamInfoWrapper) {
         // change the state to executing
-        rowStreamInfo.setState(IsExecutingRowStreamState.instance(lock));
+        rowStreamInfoWrapper.setState(IsExecutingRowStreamState.instance(lock));
 
-        rowStreamInfo.getWorkerExecutor().executeBlocking(future -> readPage(rowStreamInfo, future),
-                readPageResultFuture -> afterReadPage(rowStreamInfo, readPageResultFuture));
+        rowStreamInfoWrapper.getWorkerExecutor().executeBlocking(future -> readPage(rowStreamInfoWrapper, future),
+                readPageResultFuture -> afterReadPage(rowStreamInfoWrapper, readPageResultFuture));
     }
 
-    private static void readPage(RowStreamInfo rowStreamInfo, Future<Object> future) {
-        ResultSet resultSet = rowStreamInfo.getResultSet();
+    private static void readPage(RowStreamInfoWrapper rowStreamInfoWrapper, Future<Object> future) {
+        ResultSet resultSet = rowStreamInfoWrapper.getResultSet();
         int remainingInPage = resultSet.getAvailableWithoutFetching();
 
         try {
             int limit = wasLastPage(resultSet) ? 0 : 100;
 
             // read page only when we are in executing state and data is remaining in the page
-            while (rowStreamInfo.getState().getClass() == IsExecutingRowStreamState.class
+            while (rowStreamInfoWrapper.stateClass() == IsExecutingRowStreamState.class
                     && remainingInPage-- > limit) {
                 Row row = resultSet.one();
-                JsonArray jsonArray = rowStreamInfo.getRowMapper().apply(row);
-                if (rowStreamInfo.getHandler().isPresent()) {
-                    rowStreamInfo.getHandler().get().handle(jsonArray);
+                JsonArray jsonArray = rowStreamInfoWrapper.getRowMapper().apply(row);
+                if (rowStreamInfoWrapper.getHandler().isPresent()) {
+                    rowStreamInfoWrapper.getHandler().get().handle(jsonArray);
                 }
             }
 
@@ -69,10 +69,10 @@ final class IsPausedRowStreamState implements RowStreamState {
         }
     }
 
-    private void afterReadPage(RowStreamInfo rowStreamInfo, AsyncResult<Object> readPageResultFuture) {
+    private void afterReadPage(RowStreamInfoWrapper rowStreamInfoWrapper, AsyncResult<Object> readPageResultFuture) {
 
-        rowStreamInfo.getWorkerExecutor().executeBlocking(future -> {
-            ResultSet resultSet = rowStreamInfo.getResultSet();
+        rowStreamInfoWrapper.getWorkerExecutor().executeBlocking(future -> {
+            ResultSet resultSet = rowStreamInfoWrapper.getResultSet();
 
             try {
                 if (readPageResultFuture.failed()) {
@@ -80,18 +80,18 @@ final class IsPausedRowStreamState implements RowStreamState {
                 } else {
                     if (wasLastPage(resultSet)) {
                         // call end handler when all pages are read
-                        if (rowStreamInfo.getEndHandler().isPresent()) {
-                            rowStreamInfo.getEndHandler().get().handle(null);
+                        if (rowStreamInfoWrapper.getEndHandler().isPresent()) {
+                            rowStreamInfoWrapper.getEndHandler().get().handle(null);
                         }
                     } else {
                         synchronized (lock) {
                             // pause the stream since we still have data and may continue executing
-                            if (rowStreamInfo.getState().getClass() == IsExecutingRowStreamState.class) {
-                                rowStreamInfo.setState(IsPausedRowStreamState.instance(lock));
+                            if (rowStreamInfoWrapper.stateClass() == IsExecutingRowStreamState.class) {
+                                rowStreamInfoWrapper.setState(IsPausedRowStreamState.instance(lock));
                                 lock.notify(); // leave the lock on wrapper
                                 // call result set closed handler when a page is read
-                                if (rowStreamInfo.getResultSetClosedHandler().isPresent()) {
-                                    rowStreamInfo.getResultSetClosedHandler().get().handle(null);
+                                if (rowStreamInfoWrapper.getResultSetClosedHandler().isPresent()) {
+                                    rowStreamInfoWrapper.getResultSetClosedHandler().get().handle(null);
                                 }
                             }  // all other states (paused, closed) are not required to be handled in else part
                         }
@@ -100,8 +100,8 @@ final class IsPausedRowStreamState implements RowStreamState {
                 }
             } catch (Exception e) {
                 // process the exception
-                if (rowStreamInfo.getExceptionHandler().isPresent()) {
-                    rowStreamInfo.getExceptionHandler().get().handle(e);
+                if (rowStreamInfoWrapper.getExceptionHandler().isPresent()) {
+                    rowStreamInfoWrapper.getExceptionHandler().get().handle(e);
                 }
                 future.fail(e);
             }
@@ -115,7 +115,7 @@ final class IsPausedRowStreamState implements RowStreamState {
     }
 
     @Override
-    public void pause(RowStreamInfo rowStreamInfo) {
-        handleIllegalStateException(rowStreamInfo, "Cannot re-pause when stream is already paused");
+    public void pause(RowStreamInfoWrapper rowStreamInfoWrapper) {
+        handleIllegalStateException(rowStreamInfoWrapper, "Cannot re-pause when stream is already paused");
     }
 }

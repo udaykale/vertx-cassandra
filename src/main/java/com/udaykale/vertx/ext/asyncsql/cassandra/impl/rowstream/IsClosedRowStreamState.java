@@ -19,18 +19,18 @@ final class IsClosedRowStreamState implements RowStreamState {
     }
 
     @Override
-    public void close(RowStreamInfo rowStreamInfo, CassandraRowStream cassandraRowStream,
+    public void close(RowStreamInfoWrapper rowStreamInfoWrapper, CassandraRowStream cassandraRowStream,
                       Handler<AsyncResult<Void>> closeHandler) {
-        handleIllegalStateException(rowStreamInfo, "Cannot re-close when stream is already closed");
+        handleIllegalStateException(rowStreamInfoWrapper, "Cannot re-close when stream is already closed");
     }
 
     @Override
-    public void execute(RowStreamInfo rowStreamInfo) {
-        handleIllegalStateException(rowStreamInfo, "Cannot execute when stream is already closed");
+    public void execute(RowStreamInfoWrapper rowStreamInfoWrapper) {
+        handleIllegalStateException(rowStreamInfoWrapper, "Cannot execute when stream is already closed");
     }
 
     @Override
-    public void pause(RowStreamInfo rowStreamInfo) {
-        handleIllegalStateException(rowStreamInfo, "Cannot pause when stream is already closed");
+    public void pause(RowStreamInfoWrapper rowStreamInfoWrapper) {
+        handleIllegalStateException(rowStreamInfoWrapper, "Cannot pause when stream is already closed");
     }
 }

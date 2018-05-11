@@ -16,14 +16,14 @@ final class RowStreamCloseHelper {
         return new RowStreamCloseHelper();
     }
 
-    public void close(RowStreamInfo rowStreamInfo, CassandraRowStream rowStream,
+    public void close(RowStreamInfoWrapper rowStreamInfoWrapper, CassandraRowStream rowStream,
                       Handler<AsyncResult<Void>> closeHandler) {
         // change state to closing
-        rowStreamInfo.setState(IsClosedRowStreamState.instance());
-        rowStreamInfo.getAllRowStreams().remove(rowStream);
+        rowStreamInfoWrapper.setState(IsClosedRowStreamState.instance());
+        rowStreamInfoWrapper.getAllRowStreams().remove(rowStream);
 
         if (closeHandler != null) {
-            rowStreamInfo.getWorkerExecutor().executeBlocking(future -> {
+            rowStreamInfoWrapper.getWorkerExecutor().executeBlocking(future -> {
                 try {
                     closeHandler.handle(null);
                     future.complete();
@@ -32,7 +32,7 @@ final class RowStreamCloseHelper {
                 }
             }, futureResult -> {
                 if (futureResult.failed()) {
-                    rowStreamInfo.getWorkerExecutor().executeBlocking(future -> {
+                    rowStreamInfoWrapper.getWorkerExecutor().executeBlocking(future -> {
                         closeHandler.handle(null);
                         future.fail(futureResult.cause());
                     }, futureRes -> {

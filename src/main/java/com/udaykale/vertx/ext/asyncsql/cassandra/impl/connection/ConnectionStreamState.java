@@ -35,40 +35,40 @@ class ConnectionStreamState implements CassandraConnectionState {
     }
 
     @Override
-    public void close(ConnectionInfo connectionInfo, CassandraConnection connection,
+    public void close(ConnectionInfoWrapper connectionInfoWrapper, CassandraConnection connection,
                       Handler<AsyncResult<Void>> closeHandler) {
-        connectionInfo.setState(CloseConnectionState.instance());
-        connectionInfo.getAllOpenConnections().remove(connection);
+        connectionInfoWrapper.setState(CloseConnectionState.instance());
+        connectionInfoWrapper.getAllOpenConnections().remove(connection);
 
-        for (SQLRowStream sqlRowStream : connectionInfo.getAllRowStreams()) {
+        for (SQLRowStream sqlRowStream : connectionInfoWrapper.getAllRowStreams()) {
             sqlRowStream.close();
         }
 
         if (closeHandler != null) {
-            Context context = connectionInfo.getContext();
+            Context context = connectionInfoWrapper.getContext();
             context.runOnContext(v -> closeHandler.handle(Future.succeededFuture()));
         }
     }
 
     @Override
-    public void stream(ConnectionInfo connectionInfo, List<String> queries, List<JsonArray> params,
+    public void stream(ConnectionInfoWrapper connectionInfoWrapper, List<String> queries, List<JsonArray> params,
                        Function<Row, JsonArray> rowMapper, Handler<AsyncResult<SQLRowStream>> handler) {
-        Context context = connectionInfo.getContext();
+        Context context = connectionInfoWrapper.getContext();
 
-        connectionInfo.getWorkerExecutor().executeBlocking((Handler<Future<SQLRowStream>>) future ->
-                        executeQueryAndStream(connectionInfo, queries, params, rowMapper, future),
+        connectionInfoWrapper.getWorkerExecutor().executeBlocking((Handler<Future<SQLRowStream>>) future ->
+                        executeQueryAndStream(connectionInfoWrapper, queries, params, rowMapper, future),
                 future -> handlerForExecuteQueryAndStream(handler, future, context));
     }
 
-    private static void executeQueryAndStream(ConnectionInfo connectionInfo, List<String> queries,
+    private static void executeQueryAndStream(ConnectionInfoWrapper connectionInfoWrapper, List<String> queries,
                                               List<JsonArray> params, Function<Row, JsonArray> rowMapper,
                                               Future<SQLRowStream> future) {
         try {
-            Session session = connectionInfo.getSession();
-            SQLOptions sqlOptions = connectionInfo.getSqlOptions();
-            WorkerExecutor workerExecutor = connectionInfo.getWorkerExecutor();
-            Set<SQLRowStream> allRowStreams = connectionInfo.getAllRowStreams();
-            Map<String, PreparedStatement> preparedStatementCache = connectionInfo.getPreparedStatementCache();
+            Session session = connectionInfoWrapper.getSession();
+            SQLOptions sqlOptions = connectionInfoWrapper.getSqlOptions();
+            WorkerExecutor workerExecutor = connectionInfoWrapper.getWorkerExecutor();
+            Set<SQLRowStream> allRowStreams = connectionInfoWrapper.getAllRowStreams();
+            Map<String, PreparedStatement> preparedStatementCache = connectionInfoWrapper.getPreparedStatementCache();
 
             // generate cassandra CQL statement from given params
             Statement statement = generateStatement(queries, params, session, preparedStatementCache);
@@ -77,8 +77,8 @@ class ConnectionStreamState implements CassandraConnectionState {
             // execute statement
             com.datastax.driver.core.ResultSet resultSet = session.execute(statement);
             // create a row stream from the result set
-            int rowStreamId = connectionInfo.generateStreamId();
-            Context context = connectionInfo.getContext();
+            int rowStreamId = connectionInfoWrapper.generateStreamId();
+            Context context = connectionInfoWrapper.getContext();
             CassandraRowStreamImpl cassandraRowStream = CassandraRowStreamImpl.of(rowStreamId,
                     resultSet, workerExecutor, allRowStreams, rowMapper, context);
             // add this new stream to list of already created streams

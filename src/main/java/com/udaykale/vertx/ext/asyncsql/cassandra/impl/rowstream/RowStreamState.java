@@ -9,10 +9,10 @@ import io.vertx.core.Handler;
  */
 public interface RowStreamState {
 
-    void close(RowStreamInfo rowStreamInfo, CassandraRowStream cassandraRowStream,
+    void close(RowStreamInfoWrapper rowStreamInfoWrapper, CassandraRowStream cassandraRowStream,
                Handler<AsyncResult<Void>> closeHandler);
 
-    void execute(RowStreamInfo rowStreamInfo);
+    void execute(RowStreamInfoWrapper rowStreamInfoWrapper);
 
-    void pause(RowStreamInfo rowStreamInfo);
+    void pause(RowStreamInfoWrapper rowStreamInfoWrapper);
 }
