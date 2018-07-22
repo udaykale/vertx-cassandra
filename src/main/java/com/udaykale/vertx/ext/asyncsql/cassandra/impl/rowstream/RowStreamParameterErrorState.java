@@ -19,16 +19,19 @@ public class RowStreamParameterErrorState implements RowStreamState {
     @Override
     public void close(RowStreamInfoWrapper rowStreamInfoWrapper, CassandraRowStream cassandraRowStream,
                       Handler<AsyncResult<Void>> closeHandler) {
+        // TODO: Call handler with failure instead of throwing an exception
         // do nothing since an error was already thrown because parameters were set wrong
     }
 
     @Override
     public void execute(RowStreamInfoWrapper rowStreamInfoWrapper) {
+        // TODO: Call handler with failure instead of throwing an exception
         // do nothing since an error was already thrown because parameters were set wrong
     }
 
     @Override
     public void pause(RowStreamInfoWrapper rowStreamInfoWrapper) {
+        // TODO: Call handler with failure instead of throwing an exception
         // do nothing since an error was already thrown because parameters were set wrong
     }
 }

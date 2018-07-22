@@ -18,6 +18,7 @@ import java.util.function.Function;
 /**
  * @author uday
  */
+// TODO: Remove everything other than state from this class
 final class RowStreamInfoWrapper {
     private final Context context;
     private final ResultSet resultSet;

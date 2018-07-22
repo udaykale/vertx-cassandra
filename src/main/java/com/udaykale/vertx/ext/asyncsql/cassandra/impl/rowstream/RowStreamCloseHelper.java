@@ -40,6 +40,8 @@ final class RowStreamCloseHelper {
                     });
                 }
             });
-        }  // do nothing in else part
+        } else {
+            // do nothing in else part
+        }
     }
 }

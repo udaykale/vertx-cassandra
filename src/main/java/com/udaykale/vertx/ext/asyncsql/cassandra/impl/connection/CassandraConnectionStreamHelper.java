@@ -4,6 +4,7 @@ import com.datastax.driver.core.Row;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonArray;
+import io.vertx.ext.sql.SQLOptions;
 import io.vertx.ext.sql.SQLRowStream;
 
 import java.util.List;
@@ -27,10 +28,11 @@ final class CassandraConnectionStreamHelper {
         return new CassandraConnectionStreamHelper(lock);
     }
 
-    void queryStreamWithParams(ConnectionInfoWrapper connectionInfoWrapper, List<String> queries, List<JsonArray> params,
-                               Function<Row, JsonArray> rowMapper, Handler<AsyncResult<SQLRowStream>> handler) {
+    void queryStreamWithParams(ConnectionStateWrapper connectionStateWrapper, List<String> queries, List<JsonArray> params,
+                               SQLOptions sqlOptions, Function<Row, JsonArray> rowMapper,
+                               Handler<AsyncResult<SQLRowStream>> handler) {
         synchronized (lock) {
-            connectionInfoWrapper.stream(queries, params, rowMapper, handler);
+            connectionStateWrapper.stream(queries, params, rowMapper, sqlOptions, handler);
         }
     }
 }

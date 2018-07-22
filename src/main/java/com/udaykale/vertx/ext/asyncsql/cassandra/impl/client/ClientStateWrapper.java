@@ -29,7 +29,7 @@ final class ClientStateWrapper {
         state.createConnection(this, handler);
     }
 
-    public void setState(CassandraClientState clientState) {
+    void setState(CassandraClientState clientState) {
         this.state = Objects.requireNonNull(clientState);
     }
 }

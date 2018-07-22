@@ -121,16 +121,14 @@ public class ConnectionQueryTest {
                 async.complete();
             } else {
                 SQLConnection sqlConnection = connectionFuture.result();
-                try {
-                    sqlConnection.execute(QUERY, queryFuture -> {
+                sqlConnection.execute(QUERY, queryFuture -> {
+                    if (queryFuture.failed()) {
+                        async.complete();
+                    } else {
                         context.fail();
                         async.complete();
-                    }).setOptions(null);
-                    context.fail();
-                    async.complete();
-                } catch (Throwable e) {
-                    async.complete();
-                }
+                    }
+                }).setOptions(null);
             }
         });
     }

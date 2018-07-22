@@ -7,6 +7,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonArray;
 import io.vertx.ext.sql.ResultSet;
+import io.vertx.ext.sql.SQLOptions;
 import io.vertx.ext.sql.SQLRowStream;
 import io.vertx.ext.sql.UpdateResult;
 
@@ -28,19 +29,14 @@ final class CassandraConnectionUtil {
     private CassandraConnectionUtil() {
     }
 
-    static void handleUpdate(Handler<AsyncResult<UpdateResult>> resultHandler,
-                             Context context, AsyncResult<ResultSet> future) {
-        Future<UpdateResult> result;
-
+    static void handleUpdate(Handler<AsyncResult<UpdateResult>> handler, AsyncResult<ResultSet> future) {
         if (future.succeeded()) {
             UpdateResult updateResult = new UpdateResult();
             updateResult.setUpdated(-1);
-            result = Future.succeededFuture(updateResult);
+            handler.handle(Future.succeededFuture(updateResult));
         } else {
-            result = Future.failedFuture(future.cause());
+            handler.handle(Future.failedFuture(future.cause()));
         }
-
-        context.runOnContext(v -> result.setHandler(resultHandler));
     }
 
     static void handleBatch(int resultSize, Handler<AsyncResult<List<Integer>>> handler,
@@ -56,59 +52,38 @@ final class CassandraConnectionUtil {
         context.runOnContext(v -> result.setHandler(handler));
     }
 
-    static void handleQuery(Handler<AsyncResult<Void>> resultHandler,
-                            Context context, AsyncResult<ResultSet> future) {
-        Future<Void> result = Future.future();
-
-        if (future.succeeded()) {
-            result.complete();
-        } else {
-            result.fail(future.cause());
-        }
-
-        context.runOnContext(v -> result.setHandler(resultHandler));
-    }
-
-    static void queryWithParams(ConnectionInfoWrapper connectionInfoWrapper, List<String> query,
-                                List<JsonArray> params, Function<Row, JsonArray> rowMapper,
+    static void queryWithParams(AtomicBoolean lock, ConnectionStateWrapper connectionStateWrapper, List<String> query,
+                                List<JsonArray> params, Function<Row, JsonArray> rowMapper, SQLOptions sqlOptions,
                                 Handler<AsyncResult<ResultSet>> resultHandler) {
         Objects.requireNonNull(query);
         List<JsonArray> jsonArrays = new LinkedList<>();
         Future<ResultSet> result = Future.future();
-        Context context = connectionInfoWrapper.getContext();
 
-        queryStreamWithParams(connectionInfoWrapper, query, params, rowMapper, queryResult -> {
-            if (queryResult.failed()) {
-                result.fail(queryResult.cause());
-            } else {
-                SQLRowStream sqlRowStream = queryResult.result();
+        CassandraConnectionStreamHelper.of(lock).queryStreamWithParams(connectionStateWrapper, query, params,
+                sqlOptions, rowMapper, queryResult -> {
+                    if (queryResult.failed()) {
+                        result.fail(queryResult.cause());
+                    } else {
+                        SQLRowStream sqlRowStream = queryResult.result();
 
-                sqlRowStream.resultSetClosedHandler(v -> sqlRowStream.moreResults())
-                        .handler(jsonArrays::add)
-                        .endHandler(e -> streamEndHandler(jsonArrays, result, sqlRowStream))
-                        .exceptionHandler(result::fail);
-            }
-            context.runOnContext(v -> result.setHandler(resultHandler));
-        });
+                        sqlRowStream.resultSetClosedHandler(v -> sqlRowStream.moreResults())
+                                .handler(jsonArrays::add)
+                                .endHandler(e -> streamEndHandler(jsonArrays, result, sqlRowStream))
+                                .exceptionHandler(result::fail);
+                    }
+                    result.setHandler(resultHandler);
+                });
     }
 
-    static void queryWithParams(ConnectionInfoWrapper connectionInfoWrapper, String query,
-                                JsonArray params, Function<Row, JsonArray> rowMapper,
+    static void queryWithParams(AtomicBoolean lock, ConnectionStateWrapper connectionStateWrapper, String query,
+                                JsonArray params, Function<Row, JsonArray> rowMapper, SQLOptions sqlOptions,
                                 Handler<AsyncResult<ResultSet>> resultHandler) {
-        queryWithParams(connectionInfoWrapper, singletonList(query), emptyListIfNull(params), rowMapper, resultHandler);
+        queryWithParams(lock, connectionStateWrapper, singletonList(query), emptyListIfNull(params),
+                rowMapper, sqlOptions, resultHandler);
     }
 
     private static <T> List<T> emptyListIfNull(T element) {
         return element == null ? EMPTY_LIST : singletonList(element);
-    }
-
-    static void queryStreamWithParams(ConnectionInfoWrapper connectionInfoWrapper,
-                                      List<String> queries, List<JsonArray> params,
-                                      Function<Row, JsonArray> rowMapper,
-                                      Handler<AsyncResult<SQLRowStream>> handler) {
-        AtomicBoolean lock = connectionInfoWrapper.getLock();
-        CassandraConnectionStreamHelper helper = CassandraConnectionStreamHelper.of(lock);
-        helper.queryStreamWithParams(connectionInfoWrapper, queries, params, rowMapper, handler);
     }
 
     private static void streamEndHandler(List<JsonArray> jsonArrays, Future<ResultSet> result,

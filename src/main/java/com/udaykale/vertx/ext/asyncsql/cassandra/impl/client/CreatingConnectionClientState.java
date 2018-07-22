@@ -106,8 +106,8 @@ final class CreatingConnectionClientState implements CassandraClientState {
 
         int connectionId = connectionIdGenerator.getAndIncrement();
         // create a new connection
-        CassandraConnection connection = CassandraConnectionImpl.of(connectionId, context,
-                allOpenConnections, session, workerExecutor, preparedStatementsCache);
+        CassandraConnection connection = CassandraConnectionImpl.of(connectionId, context, allOpenConnections, session,
+                workerExecutor, preparedStatementsCache);
         // add it to list instance ongoing connections
         allOpenConnections.add(connection);
 
