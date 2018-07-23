@@ -12,9 +12,6 @@ import io.vertx.ext.sql.SQLRowStream;
 import java.util.List;
 import java.util.function.Function;
 
-/**
- * @author uday
- */
 class CloseConnectionState implements CassandraConnectionState {
 
     private CloseConnectionState() {

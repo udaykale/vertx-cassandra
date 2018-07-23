@@ -5,32 +5,36 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonArray;
 
-import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream.RowStreamUtil.handleIllegalStateException;
+public class ParamErrorRowStreamState implements RowStreamState {
 
-final class IsClosedRowStreamState implements RowStreamState {
+    private Throwable error;
 
-    private IsClosedRowStreamState() {
+    private ParamErrorRowStreamState(Throwable error) {
+        this.error = error;
     }
 
-    static IsClosedRowStreamState instance() {
-        return new IsClosedRowStreamState();
+    static ParamErrorRowStreamState instance(Throwable error) {
+        return new ParamErrorRowStreamState(error);
     }
 
     @Override
     public void close(RowStreamStateWrapper rowStreamStateWrapper, CassandraRowStream cassandraRowStream,
                       Handler<AsyncResult<Void>> closeHandler, Handler<Throwable> exceptionHandler) {
-        handleIllegalStateException(rowStreamStateWrapper, "Cannot re-close when stream is already closed", exceptionHandler);
+        // TODO: Call handler with failure instead of throwing an exception
+        // do nothing since an error was already thrown because parameters were set wrong
     }
 
     @Override
     public void execute(RowStreamStateWrapper rowStreamStateWrapper, Handler<Throwable> exceptionHandler,
                         Handler<Void> endHandler, Handler<JsonArray> handler, Handler<Void> resultSetClosedHandler,
                         Handler<AsyncResult<Void>> closeHandler) {
-        handleIllegalStateException(rowStreamStateWrapper, "Cannot execute when stream is already closed", exceptionHandler);
+        // TODO: Call handler with failure instead of throwing an exception
+        // do nothing since an error was already thrown because parameters were set wrong
     }
 
     @Override
     public void pause(RowStreamStateWrapper rowStreamStateWrapper, Handler<Throwable> exceptionHandler) {
-        handleIllegalStateException(rowStreamStateWrapper, "Cannot pause when stream is already closed", exceptionHandler);
+        // TODO: Call handler with failure instead of throwing an exception
+        // do nothing since an error was already thrown because parameters were set wrong
     }
 }

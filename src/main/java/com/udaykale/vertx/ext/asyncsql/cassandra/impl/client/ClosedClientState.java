@@ -6,11 +6,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.ext.sql.SQLConnection;
 
-/**
- * State of the cassandra client when it is closed
- *
- * @author uday
- */
 final class ClosedClientState implements CassandraClientState {
 
     private final Context context;

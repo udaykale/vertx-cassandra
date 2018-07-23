@@ -11,9 +11,6 @@ import io.vertx.ext.sql.SQLRowStream;
 import java.util.List;
 import java.util.function.Function;
 
-/**
- * @author uday
- */
 interface CassandraConnectionState {
 
     void close(ConnectionStateWrapper connectionStateWrapper, CassandraConnection connection, Handler<AsyncResult<Void>> closeHandler);

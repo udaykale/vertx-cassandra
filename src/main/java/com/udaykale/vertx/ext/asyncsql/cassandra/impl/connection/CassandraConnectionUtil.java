@@ -21,9 +21,6 @@ import static java.util.Collections.EMPTY_LIST;
 import static java.util.Collections.nCopies;
 import static java.util.Collections.singletonList;
 
-/**
- * @author uday
- */
 final class CassandraConnectionUtil {
 
     private CassandraConnectionUtil() {

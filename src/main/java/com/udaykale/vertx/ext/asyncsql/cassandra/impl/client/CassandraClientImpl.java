@@ -12,9 +12,6 @@ import io.vertx.ext.sql.SQLConnection;
 import java.util.Map;
 import java.util.Objects;
 
-/**
- * @author uday
- */
 public final class CassandraClientImpl implements CassandraClient {
 
     private final String clientName;

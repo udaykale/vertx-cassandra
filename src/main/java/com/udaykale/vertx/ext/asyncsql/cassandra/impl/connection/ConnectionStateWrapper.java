@@ -12,9 +12,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 
-/**
- * @author uday
- */
 final class ConnectionStateWrapper {
 
     private CassandraConnectionState state;
@@ -37,7 +34,6 @@ final class ConnectionStateWrapper {
     }
 
     void setState(CassandraConnectionState state) {
-        Objects.requireNonNull(state);
-        this.state = state;
+        this.state = Objects.requireNonNull(state);
     }
 }

@@ -35,9 +35,6 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.nCopies;
 import static java.util.Collections.singletonList;
 
-/**
- * @author uday
- */
 public final class CassandraConnectionImpl implements CassandraConnection {
 
     private final Context context;

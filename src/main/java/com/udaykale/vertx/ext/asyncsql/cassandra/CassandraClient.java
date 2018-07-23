@@ -9,9 +9,6 @@ import io.vertx.ext.sql.SQLClient;
 import java.util.Objects;
 import java.util.UUID;
 
-/**
- * @author uday
- */
 public interface CassandraClient extends SQLClient, Shareable {
 
     String DEFAULT_CLIENT_NAME = "DEFAULT_CASSANDRA_CLIENT_NAME";

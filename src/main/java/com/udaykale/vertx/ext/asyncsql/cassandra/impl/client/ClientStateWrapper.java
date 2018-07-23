@@ -6,9 +6,6 @@ import io.vertx.ext.sql.SQLConnection;
 
 import java.util.Objects;
 
-/**
- * @author uday
- */
 final class ClientStateWrapper {
 
     private CassandraClientState state;

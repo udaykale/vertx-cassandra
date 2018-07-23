@@ -24,9 +24,6 @@ import java.util.function.Function;
 
 import static com.udaykale.vertx.ext.asyncsql.cassandra.impl.connection.CassandraStatementUtil.generateStatement;
 
-/**
- * @author uday
- */
 class ConnectionStreamState implements CassandraConnectionState {
 
     private final Context context;
@@ -84,7 +81,7 @@ class ConnectionStreamState implements CassandraConnectionState {
                        SQLOptions sqlOptions, Function<Row, JsonArray> rowMapper,
                        Handler<AsyncResult<SQLRowStream>> handler) {
         workerExecutor.executeBlocking((Handler<Future<SQLRowStream>>) future ->
-                executeQueryAndStream(connectionStateWrapper, queries, params, rowMapper, sqlOptions, future), fut -> {
+                executeQueryAndStream(queries, params, rowMapper, sqlOptions, future), fut -> {
             if (fut.failed()) {
                 handler.handle(Future.failedFuture(fut.cause()));
             } else {
@@ -93,8 +90,7 @@ class ConnectionStreamState implements CassandraConnectionState {
         });
     }
 
-    private void executeQueryAndStream(ConnectionStateWrapper connectionStateWrapper, List<String> queries,
-                                       List<JsonArray> params, Function<Row, JsonArray> rowMapper,
+    private void executeQueryAndStream(List<String> queries, List<JsonArray> params, Function<Row, JsonArray> rowMapper,
                                        SQLOptions sqlOptions, Future<SQLRowStream> future) {
         try {
             // generate cassandra CQL statement from given params

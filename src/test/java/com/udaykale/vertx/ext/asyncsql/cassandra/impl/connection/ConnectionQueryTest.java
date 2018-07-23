@@ -26,9 +26,6 @@ import org.mockito.Mockito;
 
 import java.util.List;
 
-/**
- * @author uday
- */
 @RunWith(VertxUnitRunner.class)
 public class ConnectionQueryTest {
 

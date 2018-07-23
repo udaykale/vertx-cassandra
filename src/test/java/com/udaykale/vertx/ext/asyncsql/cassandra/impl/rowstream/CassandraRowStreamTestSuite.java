@@ -5,9 +5,6 @@ import org.junit.runners.Suite;
 
 import static org.junit.runners.Suite.*;
 
-/**
- * @author uday
- */
 @RunWith(Suite.class)
 @SuiteClasses({
         CassandraRowStreamTest.class

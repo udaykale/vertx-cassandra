@@ -12,9 +12,6 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
-/**
- * @author uday
- */
 final class CassandraConnectionStreamHelper {
 
     private final AtomicBoolean lock;

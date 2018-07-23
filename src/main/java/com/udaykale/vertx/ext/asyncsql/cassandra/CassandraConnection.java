@@ -11,9 +11,6 @@ import io.vertx.ext.sql.SQLRowStream;
 import java.util.List;
 import java.util.function.Function;
 
-/**
- * @author uday
- */
 public interface CassandraConnection extends SQLConnection, Comparable<CassandraConnection> {
 
     CassandraConnection queryStreamWithParams(String query, JsonArray params, Function<Row, JsonArray> rowMapper,

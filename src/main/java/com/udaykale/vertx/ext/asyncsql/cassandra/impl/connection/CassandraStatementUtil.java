@@ -11,9 +11,6 @@ import io.vertx.core.json.JsonArray;
 import java.util.List;
 import java.util.Map;
 
-/**
- * @author uday
- */
 final class CassandraStatementUtil {
 
     private CassandraStatementUtil() {

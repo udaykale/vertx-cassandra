@@ -3,27 +3,33 @@ package com.udaykale.vertx.ext.asyncsql.cassandra.impl.rowstream;
 import com.udaykale.vertx.ext.asyncsql.cassandra.CassandraRowStream;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
+import io.vertx.core.WorkerExecutor;
+import io.vertx.ext.sql.SQLRowStream;
 
-/**
- * @author uday
- */
+import java.util.Set;
+
 final class RowStreamCloseHelper {
 
-    private RowStreamCloseHelper() {
+    private final Set<SQLRowStream> allRowStreams;
+    private final WorkerExecutor workerExecutor;
+
+    private RowStreamCloseHelper(Set<SQLRowStream> allRowStreams, WorkerExecutor workerExecutor) {
+        this.allRowStreams = allRowStreams;
+        this.workerExecutor = workerExecutor;
     }
 
-    static RowStreamCloseHelper of() {
-        return new RowStreamCloseHelper();
+    static RowStreamCloseHelper of(Set<SQLRowStream> allRowStreams, WorkerExecutor workerExecutor) {
+        return new RowStreamCloseHelper(allRowStreams, workerExecutor);
     }
 
-    public void close(RowStreamInfoWrapper rowStreamInfoWrapper, CassandraRowStream rowStream,
+    public void close(RowStreamStateWrapper rowStreamStateWrapper, CassandraRowStream rowStream,
                       Handler<AsyncResult<Void>> closeHandler) {
         // change state to closing
-        rowStreamInfoWrapper.setState(IsClosedRowStreamState.instance());
-        rowStreamInfoWrapper.getAllRowStreams().remove(rowStream);
+        rowStreamStateWrapper.setState(IsClosedRowStreamState.instance());
+        allRowStreams.remove(rowStream);
 
         if (closeHandler != null) {
-            rowStreamInfoWrapper.getWorkerExecutor().executeBlocking(future -> {
+            workerExecutor.executeBlocking(future -> {
                 try {
                     closeHandler.handle(null);
                     future.complete();
@@ -32,7 +38,7 @@ final class RowStreamCloseHelper {
                 }
             }, futureResult -> {
                 if (futureResult.failed()) {
-                    rowStreamInfoWrapper.getWorkerExecutor().executeBlocking(future -> {
+                    workerExecutor.executeBlocking(future -> {
                         closeHandler.handle(null);
                         future.fail(futureResult.cause());
                     }, futureRes -> {

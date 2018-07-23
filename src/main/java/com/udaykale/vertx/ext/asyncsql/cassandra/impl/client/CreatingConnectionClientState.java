@@ -22,8 +22,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * State of the client when it has is accepting request for new connection creation
- *
- * @author uday
  */
 final class CreatingConnectionClientState implements CassandraClientState {
 

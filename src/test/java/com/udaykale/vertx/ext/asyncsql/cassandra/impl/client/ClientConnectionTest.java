@@ -15,9 +15,6 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 
-/**
- * @author uday
- */
 @RunWith(VertxUnitRunner.class)
 public class ClientConnectionTest {
     private CassandraClient cassandraClient;

@@ -2,9 +2,6 @@ package com.udaykale.vertx.ext.asyncsql.cassandra;
 
 import io.vertx.ext.sql.SQLRowStream;
 
-/**
- * @author uday
- */
 public interface CassandraRowStream extends SQLRowStream, Comparable<CassandraRowStream> {
 
     int getStreamId();

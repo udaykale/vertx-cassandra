@@ -5,9 +5,6 @@ import org.junit.runners.Suite;
 
 import static org.junit.runners.Suite.SuiteClasses;
 
-/**
- * @author uday
- */
 @RunWith(Suite.class)
 @SuiteClasses({
         EqualsAndHashCodeTest.class,
