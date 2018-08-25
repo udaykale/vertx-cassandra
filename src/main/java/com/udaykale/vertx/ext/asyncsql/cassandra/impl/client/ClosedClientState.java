@@ -1,21 +1,17 @@
 package com.udaykale.vertx.ext.asyncsql.cassandra.impl.client;
 
 import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.ext.sql.SQLConnection;
 
 final class ClosedClientState implements CassandraClientState {
 
-    private final Context context;
-
-    private ClosedClientState(Context context) {
-        this.context = context;
+    private ClosedClientState() {
     }
 
-    static CassandraClientState instance(Context context) {
-        return new ClosedClientState(context);
+    static CassandraClientState instance() {
+        return new ClosedClientState();
     }
 
     /**
@@ -28,13 +24,12 @@ final class ClosedClientState implements CassandraClientState {
     @Override
     public void close(ClientStateWrapper clientStateWrapper, Handler<AsyncResult<Void>> closeHandler) {
         RuntimeException e = new IllegalStateException("Cannot re-close client when it is already closed");
-        Future<Void> result = Future.failedFuture(e);
 
-        if (closeHandler == null) {
+        if (closeHandler != null) {
+            closeHandler.handle(Future.failedFuture(e));
+        } else {
             throw e;
         }
-
-        context.runOnContext(action -> result.setHandler(closeHandler));
     }
 
     /**
@@ -49,6 +44,6 @@ final class ClosedClientState implements CassandraClientState {
     public void createConnection(ClientStateWrapper clientStateWrapper, Handler<AsyncResult<SQLConnection>> handler) {
         Exception e = new IllegalStateException("Cannot create connection when client is already closed");
         Future<SQLConnection> result = Future.failedFuture(e);
-        context.runOnContext(action -> result.setHandler(handler));
+        result.setHandler(handler);
     }
 }

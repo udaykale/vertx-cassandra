@@ -39,7 +39,7 @@ public class EqualsAndHashCodeTest {
     @Test
     public void equalsForObjectsOfDifferentTypesTest() {
         CassandraClient cassandraClient = CassandraClient.createShared(vertx, "test1", cluster);
-        Assert.assertNotEquals("", cassandraClient);
+        Assert.assertNotEquals(cassandraClient, "");
     }
 
     @Test
@@ -47,6 +47,12 @@ public class EqualsAndHashCodeTest {
         CassandraClient cassandraClient1 = CassandraClient.createShared(vertx, "test1", cluster);
         CassandraClient cassandraClient2 = CassandraClient.createShared(vertx, "test2", cluster);
         Assert.assertNotEquals(cassandraClient1, cassandraClient2);
+    }
+
+    @Test
+    public void equalsForNullObjectTest() {
+        CassandraClient cassandraClient = CassandraClient.createShared(vertx, "test1", cluster);
+        Assert.assertNotEquals(cassandraClient, null);
     }
 
     @Test

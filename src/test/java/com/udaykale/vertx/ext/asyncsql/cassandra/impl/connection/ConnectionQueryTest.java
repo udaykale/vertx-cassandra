@@ -216,10 +216,8 @@ public class ConnectionQueryTest {
                 cassandraConnection.queryWithParams(QUERY, new JsonArray(), x -> null, queryFuture -> {
                     if (queryFuture.failed()) {
                         context.fail();
-                        async.complete();
-                    } else {
-                        async.complete();
                     }
+                    async.complete();
                 });
             }
         });

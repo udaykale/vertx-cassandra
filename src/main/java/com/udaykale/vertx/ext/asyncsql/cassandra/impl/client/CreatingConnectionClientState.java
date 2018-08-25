@@ -6,19 +6,20 @@ import com.datastax.driver.core.Session;
 import com.udaykale.vertx.ext.asyncsql.cassandra.CassandraConnection;
 import com.udaykale.vertx.ext.asyncsql.cassandra.impl.connection.CassandraConnectionImpl;
 import io.vertx.core.AsyncResult;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
 import io.vertx.core.WorkerExecutor;
 import io.vertx.ext.sql.SQLConnection;
 
-import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * State of the client when it has is accepting request for new connection creation
@@ -44,12 +45,11 @@ final class CreatingConnectionClientState implements CassandraClientState {
         this.session = session;
     }
 
-    static CreatingConnectionClientState instance(Vertx vertx, Cluster cluster, String keySpace, String clientName) {
+    static CreatingConnectionClientState instance(Context context, Cluster cluster, String keySpace,
+                                                  WorkerExecutor workerExecutor) {
 
-        Context context = vertx.getOrCreateContext();
         AtomicInteger connectionIdGenerator = new AtomicInteger(1);
         Set<CassandraConnection> allOpenConnection = new ConcurrentSkipListSet<>();
-        WorkerExecutor workerExecutor = vertx.createSharedWorkerExecutor(clientName);
         Map<String, PreparedStatement> preparedStatementsCache = new ConcurrentHashMap<>();
         Session session = keySpace.isEmpty() ? cluster.connect() : cluster.connect(keySpace);
 
@@ -59,44 +59,37 @@ final class CreatingConnectionClientState implements CassandraClientState {
 
     @Override
     public void close(ClientStateWrapper clientStateWrapper, Handler<AsyncResult<Void>> closeHandler) {
-        clientStateWrapper.setState(ClosedClientState.instance(context));
-        Iterator<CassandraConnection> connectionIterator = allOpenConnections.iterator();
+        clientStateWrapper.setState(ClosedClientState.instance());
 
-        workerExecutor.executeBlocking((Future<Void> blockingFuture) ->
-                        closeAllConnections(connectionIterator, blockingFuture),
-                blockingResultFuture -> afterBlockingExecution(closeHandler, blockingResultFuture));
-    }
+        List<Future> closeConnectionFutures = allOpenConnections.stream()
+                .map(this::closeConnection)
+                .collect(Collectors.toList());
 
-    private void afterBlockingExecution(Handler<AsyncResult<Void>> closeHandler, AsyncResult<Void> blockingResultFuture) {
-        Future<Void> result = Future.future();
-
-        if (blockingResultFuture.failed()) {
-            result.fail(blockingResultFuture.cause());
-        } else {
-            result.complete();
-        }
-
-        if (closeHandler != null) {
-            context.runOnContext(action -> result.setHandler(closeHandler));
-        } else {
-            // nothing to do in else part
-        }
-    }
-
-    private void closeAllConnections(Iterator<CassandraConnection> connectionIterator, Future<Void> blockingFuture) {
-        if (connectionIterator.hasNext()) {
-            SQLConnection connection = connectionIterator.next();
-
-            connection.close(resultFuture -> {
-                if (resultFuture.failed()) {
-                    blockingFuture.fail(resultFuture.cause());
+        CompositeFuture.join(closeConnectionFutures).setHandler(future -> {
+            if (closeHandler != null) {
+                if (future.failed()) {
+                    closeHandler.handle(Future.failedFuture(future.cause()));
                 } else {
-                    closeAllConnections(connectionIterator, blockingFuture);
+                    closeHandler.handle(Future.succeededFuture());
                 }
-            });
-        } else {
-            blockingFuture.complete();
-        }
+            } else {
+                // else not necessary
+            }
+        });
+    }
+
+    private Future<Void> closeConnection(CassandraConnection connection) {
+        Future<Void> future = Future.future();
+
+        connection.close(resultFuture -> {
+            if (resultFuture.failed()) {
+                future.fail(resultFuture.cause());
+            } else {
+                future.complete();
+            }
+        });
+
+        return future;
     }
 
     @Override
@@ -104,12 +97,12 @@ final class CreatingConnectionClientState implements CassandraClientState {
 
         int connectionId = connectionIdGenerator.getAndIncrement();
         // create a new connection
-        CassandraConnection connection = CassandraConnectionImpl.of(connectionId, context, allOpenConnections, session,
-                workerExecutor, preparedStatementsCache);
+        CassandraConnection connection = CassandraConnectionImpl.of(connectionId, context, workerExecutor,
+                allOpenConnections, session, preparedStatementsCache);
         // add it to list instance ongoing connections
         allOpenConnections.add(connection);
 
         Future<SQLConnection> result = Future.succeededFuture(connection);
-        context.runOnContext(v -> handler.handle(result));
+        handler.handle(result);
     }
 }

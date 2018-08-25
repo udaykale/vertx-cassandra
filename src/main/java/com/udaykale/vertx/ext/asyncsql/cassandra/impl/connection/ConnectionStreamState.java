@@ -46,8 +46,9 @@ class ConnectionStreamState implements CassandraConnectionState {
         this.preparedStatementCache = preparedStatementCache;
     }
 
-    static ConnectionStreamState instance(Context context, WorkerExecutor workerExecutor, Set<SQLRowStream> allRowStreams,
-                                          Session session, Map<String, PreparedStatement> preparedStatementCache,
+    static ConnectionStreamState instance(Context context, WorkerExecutor workerExecutor,
+                                          Set<SQLRowStream> allRowStreams, Session session,
+                                          Map<String, PreparedStatement> preparedStatementCache,
                                           AtomicInteger rowStreamId, Set<CassandraConnection> allOpenConnections) {
         return new ConnectionStreamState(context, workerExecutor, session, preparedStatementCache,
                 rowStreamId, allOpenConnections, allRowStreams);

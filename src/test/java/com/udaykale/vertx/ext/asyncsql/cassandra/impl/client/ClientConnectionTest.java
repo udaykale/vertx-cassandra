@@ -102,22 +102,6 @@ public class ClientConnectionTest {
     }
 
     @Test
-    public void closeWhenClientAlreadyClosedAndSecondCloseHandlerIsNull(TestContext context) throws InterruptedException {
-        Async async = context.async();
-        cassandraClient.close();
-        Thread.sleep(2000);
-
-        try {
-            cassandraClient.close();
-            context.fail("Close method should have thrown an exception");
-        } catch (Exception e) {
-            Assert.assertEquals("Cannot re-close client when it is already closed", e.getMessage());
-        }
-
-        async.complete();
-    }
-
-    @Test
     public void closeWhenClientAlreadyClosed(TestContext context) throws InterruptedException {
         Async async = context.async();
         cassandraClient.close();

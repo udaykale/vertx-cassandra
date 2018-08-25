@@ -1,7 +1,7 @@
 package com.udaykale.vertx.ext.asyncsql.cassandra;
 
 import com.datastax.driver.core.Cluster;
-import com.udaykale.vertx.ext.asyncsql.cassandra.impl.client.CassandraClientImpl;
+import com.udaykale.vertx.ext.asyncsql.cassandra.impl.client.CassandraClientHelper;
 import io.vertx.core.Vertx;
 import io.vertx.core.shareddata.Shareable;
 import io.vertx.ext.sql.SQLClient;
@@ -89,6 +89,7 @@ public interface CassandraClient extends SQLClient, Shareable {
         Objects.requireNonNull(clientName, "Client name cannot be null");
         Objects.requireNonNull(cluster, "Cluster cannot be null");
         Objects.requireNonNull(keySpace, "KeySpace cannot be null");
-        return CassandraClientImpl.getOrCreateCassandraClient(vertx, cluster, keySpace, clientName);
+
+        return CassandraClientHelper.getOrCreateCassandraClient(vertx, cluster, keySpace, clientName);
     }
 }

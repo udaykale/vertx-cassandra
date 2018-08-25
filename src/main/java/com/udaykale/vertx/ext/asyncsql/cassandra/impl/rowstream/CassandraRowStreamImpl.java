@@ -149,7 +149,8 @@ public final class CassandraRowStreamImpl implements CassandraRowStream {
     @Override
     public SQLRowStream resume() {
         synchronized (lock) {
-            context.runOnContext(v -> rowStreamStateWrapper.execute(exceptionHandler, endHandler, handler, resultSetClosedHandler, closeHandler));
+            context.runOnContext(v -> rowStreamStateWrapper.execute(exceptionHandler, endHandler, handler,
+                    resultSetClosedHandler, closeHandler));
         }
         return this;
     }

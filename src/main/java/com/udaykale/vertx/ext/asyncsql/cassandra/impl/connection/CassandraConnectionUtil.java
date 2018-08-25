@@ -2,7 +2,6 @@ package com.udaykale.vertx.ext.asyncsql.cassandra.impl.connection;
 
 import com.datastax.driver.core.Row;
 import io.vertx.core.AsyncResult;
-import io.vertx.core.Context;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonArray;
@@ -37,7 +36,7 @@ final class CassandraConnectionUtil {
     }
 
     static void handleBatch(int resultSize, Handler<AsyncResult<List<Integer>>> handler,
-                            Context context, AsyncResult<ResultSet> future) {
+                            AsyncResult<ResultSet> future) {
         Future<List<Integer>> result;
 
         if (future.succeeded()) {
@@ -46,7 +45,7 @@ final class CassandraConnectionUtil {
             result = Future.failedFuture(future.cause());
         }
 
-        context.runOnContext(v -> result.setHandler(handler));
+        result.setHandler(handler);
     }
 
     static void queryWithParams(AtomicBoolean lock, ConnectionStateWrapper connectionStateWrapper, List<String> query,

@@ -22,7 +22,7 @@ final class CassandraConnectionValidationUtils {
         try {
             Objects.requireNonNull(query);
             assert !query.isEmpty();
-            context.runOnContext(future -> nextOperation.handle(Future.succeededFuture()));
+            context.runOnContext(v -> nextOperation.handle(Future.succeededFuture()));
         } catch (Throwable t) {
             handler.handle(Future.failedFuture(t));
         }
@@ -56,7 +56,7 @@ final class CassandraConnectionValidationUtils {
             Objects.requireNonNull(sqlStatements);
             assert !sqlStatements.isEmpty();
             assert sqlStatements.stream().allMatch(String::isEmpty);
-            context.runOnContext(future -> nextOperation.handle(Future.succeededFuture()));
+            context.runOnContext(v -> nextOperation.handle(Future.succeededFuture()));
         } catch (Throwable t) {
             handler.handle(Future.failedFuture(t));
         }
